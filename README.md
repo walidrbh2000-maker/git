@@ -9,7 +9,7 @@ Boîte à outils GitHub complète pour **Termux** — upload, téléchargement, 
 Copiez et collez cette commande dans Termux :
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/walidrbh2000-maker/git/setup.sh)
+bash <(curl -sL https://raw.githubusercontent.com/walidrbh2000-maker/git/main/setup.sh)
 ```
 
 > **Pourquoi `bash <(...)` et non `curl ... | bash` ?**
