@@ -1,30 +1,14 @@
 #!/bin/bash
-
 clear
 
-# ═══════════════════════════════════════════════════════════
-#  COLORS
-# ═══════════════════════════════════════════════════════════
 GREEN='\033[0;32m';   CYAN='\033[0;36m';    YELLOW='\033[1;33m'
 RED='\033[0;31m';     BLUE='\033[0;34m';    MAGENTA='\033[0;35m'
 WHITE='\033[1;37m';   BOLD='\033[1m';       RESET='\033[0m'
 
-# ═══════════════════════════════════════════════════════════
-#  PATHS
-# ═══════════════════════════════════════════════════════════
 CONFIG_FILE="$HOME/.github_config"
 ACCOUNTS_FILE="$HOME/.github_accounts"
+TOOLS_INSTALLED=0; TOOLS_UPDATED=0; TOOLS_SKIPPED=0
 
-# ═══════════════════════════════════════════════════════════
-#  COUNTERS
-# ═══════════════════════════════════════════════════════════
-TOOLS_INSTALLED=0
-TOOLS_UPDATED=0
-TOOLS_SKIPPED=0
-
-# ═══════════════════════════════════════════════════════════
-#  HELPERS
-# ═══════════════════════════════════════════════════════════
 print_banner() {
     printf "\n"
     printf "${CYAN}${BOLD}╔══════════════════════════════════════════════════════════╗${RESET}\n"
@@ -36,10 +20,9 @@ print_banner() {
     printf "${CYAN}${BOLD}║${RESET}${WHITE}${BOLD}   ╚═════╝ ╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═════╝           ${RESET}${CYAN}${BOLD}║${RESET}\n"
     printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
     printf "${CYAN}${BOLD}║${RESET}  ${GREEN}${BOLD}🚀  MISE À JOUR INTELLIGENTE — GITHUB TOOLS  🚀${RESET}        ${CYAN}${BOLD}║${RESET}\n"
-    printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}   gitup · gitget · gitlist · gitpush · gitdel        ${RESET}  ${CYAN}${BOLD}║${RESET}\n"
-    printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}      cspace · gitswitch · gituninstall              ${RESET}    ${CYAN}${BOLD}║${RESET}\n"
-    printf "${CYAN}${BOLD}╚══════════════════════════════════════════════════════════╝${RESET}\n"
-    printf "\n"
+    printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}  gitup · gitget · gitlist · gitpush · gitpull        ${RESET}  ${CYAN}${BOLD}║${RESET}\n"
+    printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}  gitdel · gitstatus · cspace · gitswitch             ${RESET}  ${CYAN}${BOLD}║${RESET}\n"
+    printf "${CYAN}${BOLD}╚══════════════════════════════════════════════════════════╝${RESET}\n\n"
 }
 
 print_step()    { printf "${BLUE}${BOLD}  [•]${RESET} ${WHITE}$1${RESET}\n"; }
@@ -49,12 +32,8 @@ print_skip()    { printf "${YELLOW}${BOLD}  [~]${RESET} ${YELLOW}$1${RESET}\n"; 
 print_error()   { printf "${RED}${BOLD}  [✗]${RESET} ${RED}$1${RESET}\n"; }
 print_info()    { printf "${MAGENTA}${BOLD}  [i]${RESET} ${MAGENTA}$1${RESET}\n"; }
 
-# ── Compares a temp file with the installed version; installs or updates only if needed ──
 install_or_update() {
-    local name="$1"
-    local src="$2"
-    local target="$PREFIX/bin/$name"
-
+    local name="$1"; local src="$2"; local target="$PREFIX/bin/$name"
     if [ ! -f "$target" ]; then
         cp "$src" "$target" && chmod +x "$target"
         print_success "'$name' installé."
@@ -69,17 +48,15 @@ install_or_update() {
     fi
 }
 
-# ── Returns 0 if at least one account exists in the accounts file ──
 has_accounts() {
     [ -f "$ACCOUNTS_FILE" ] && grep -qv '^[[:space:]]*$' "$ACCOUNTS_FILE" 2>/dev/null
 }
 
-# ═══════════════════════════════════════════════════════════
 print_banner
 
-# ═══════════════════════════════════════════════════════════
-#  STEP 1 — DEPENDENCIES (no update / no upgrade)
-# ═══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════
+#  STEP 1 — DEPENDENCIES
+# ══════════════════════════════════════════════
 printf "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
 printf "${YELLOW}${BOLD}  📦  Vérification des dépendances${RESET}\n"
 printf "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n\n"
@@ -97,665 +74,122 @@ else
     print_step "Installation des paquets manquants : ${MISSING_PKGS[*]}..."
     pkg install "${MISSING_PKGS[@]}" -y > /dev/null 2>&1 \
         && print_success "Paquets installés avec succès." \
-        || { print_error "Échec d'installation de certains paquets."; }
+        || print_error "Échec d'installation de certains paquets."
 fi
 printf "\n"
 
-# ═══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════
 #  STEP 2 — ACCOUNT MANAGEMENT
-# ═══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════
 printf "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
 printf "${YELLOW}${BOLD}  👤  Gestion du compte GitHub${RESET}\n"
 printf "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n\n"
 
 if has_accounts; then
-    # ── Accounts already exist — keep everything ──
     if [ -f "$CONFIG_FILE" ]; then
         source "$CONFIG_FILE"
         print_skip "Comptes existants conservés. Compte actif : ${BOLD}${USERNAME}${RESET}"
     else
-        # Accounts file exists but no active config — activate the first account
         IFS='|' read -r _U _E _T _L <<< "$(grep -v '^[[:space:]]*$' "$ACCOUNTS_FILE" | head -1)"
-        {
-            printf 'USERNAME="%s"\n' "$_U"
-            printf 'EMAIL="%s"\n'    "$_E"
-            printf 'TOKEN="%s"\n'    "$_T"
-        } > "$CONFIG_FILE"
+        { printf 'USERNAME="%s"\n' "$_U"; printf 'EMAIL="%s"\n' "$_E"; printf 'TOKEN="%s"\n' "$_T"; } > "$CONFIG_FILE"
         chmod 600 "$CONFIG_FILE"
         print_info "Config absente — compte '${_U}' défini comme actif."
     fi
 else
-    # ── No accounts found — prompt the user once ──
     printf "${YELLOW}  Aucun compte GitHub trouvé. Veuillez en configurer un.${RESET}\n\n"
-
     while true; do
         read -p "$(printf "${CYAN}${BOLD}  👤  Nom d'utilisateur GitHub        : ${RESET}")" USERNAME
         [ -n "$USERNAME" ] && break
         printf "${YELLOW}  ⚠️   Le nom d'utilisateur est obligatoire.${RESET}\n"
     done
-
     read -p "$(printf "${CYAN}${BOLD}  📧  Adresse e-mail GitHub           : ${RESET}")" EMAIL
-
     while true; do
         read -p "$(printf "${CYAN}${BOLD}  🔑  Token d'accès (Classic)         : ${RESET}")" TOKEN
         [ -n "$TOKEN" ] && break
         printf "${YELLOW}  ⚠️   Le token est obligatoire.${RESET}\n"
     done
-
     read -p "$(printf "${CYAN}${BOLD}  🏷️   Label du compte (ex: Perso, Pro) : ${RESET}")" LABEL
-    LABEL="${LABEL:-$USERNAME}"
-    printf "\n"
-
-    # Validate token before saving anything
+    LABEL="${LABEL:-$USERNAME}"; printf "\n"
     print_step "Vérification du token GitHub..."
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Authorization: token $TOKEN" \
-        "https://api.github.com/user")
-
-    if [ "$HTTP_CODE" != "200" ]; then
-        print_error "Token invalide ou refusé (code HTTP : $HTTP_CODE). Abandon."
-        exit 1
-    fi
-    print_success "Token valide."
-    printf "\n"
-
-    # Save active config
-    {
-        printf 'USERNAME="%s"\n' "$USERNAME"
-        printf 'EMAIL="%s"\n'    "$EMAIL"
-        printf 'TOKEN="%s"\n'    "$TOKEN"
-    } > "$CONFIG_FILE"
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $TOKEN" "https://api.github.com/user")
+    if [ "$HTTP_CODE" != "200" ]; then print_error "Token invalide (code $HTTP_CODE). Abandon."; exit 1; fi
+    print_success "Token valide."; printf "\n"
+    { printf 'USERNAME="%s"\n' "$USERNAME"; printf 'EMAIL="%s"\n' "$EMAIL"; printf 'TOKEN="%s"\n' "$TOKEN"; } > "$CONFIG_FILE"
     chmod 600 "$CONFIG_FILE"
-
-    # Save to accounts registry
-    touch "$ACCOUNTS_FILE"
-    chmod 600 "$ACCOUNTS_FILE"
+    touch "$ACCOUNTS_FILE"; chmod 600 "$ACCOUNTS_FILE"
     echo "${USERNAME}|${EMAIL}|${TOKEN}|${LABEL}" >> "$ACCOUNTS_FILE"
-
-    # Authenticate gh CLI
     echo "$TOKEN" | gh auth login --with-token 2>/dev/null \
         && print_success "Authentification gh CLI réussie." \
         || print_error "Authentification gh CLI échouée (non bloquant)."
-
     print_success "Compte '${USERNAME}' enregistré et activé."
 fi
 printf "\n"
 
-# ═══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════
 #  STEP 3 — INSTALL / UPDATE TOOLS
-# ═══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════
 printf "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
 printf "${YELLOW}${BOLD}  🛠️   Installation / Mise à jour des outils${RESET}\n"
 printf "${MAGENTA}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n\n"
 
-# ─────────────────────────────────────────────
-#  gitup
-# ─────────────────────────────────────────────
-_T=$(mktemp); cat << 'TOOLEOF' > "$_T"
-#!/bin/bash
-
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
-
-source "$HOME/.github_config" || { printf "${RED}  ❌  Config introuvable. Lancez gitswitch ou réinstallez.${RESET}\n"; exit 1; }
-
-BASE_DIR="/storage/emulated/0"
-
-printf "\n${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}📤  GITHUB UPLOADER — Mode Intelligent${RESET}       ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}\n\n"
-printf "${CYAN}  👤  Compte actif : ${BOLD}$USERNAME${RESET}\n\n"
-
-while true; do
-    read -p "$(printf "${CYAN}${BOLD}  📂  Dossier ou fichier à uploader : ${RESET}")" USER_PATH
-    [ -z "$USER_PATH" ] && printf "${YELLOW}  ⚠️   Le nom ne peut pas être vide.${RESET}\n" && continue
-    FULL_TARGET="$BASE_DIR/$USER_PATH"
-    [ -e "$FULL_TARGET" ] && break
-    printf "${RED}  ⚠️   Introuvable : '$FULL_TARGET' n'existe pas.${RESET}\n"
-done
-
-TARGET_NAME=$(basename "$FULL_TARGET")
-TERMUX_PATH="$HOME/${TARGET_NAME}_github"
-
-read -p "$(printf "${CYAN}${BOLD}  🏷️   Nom du dépôt (vide = '$TARGET_NAME') : ${RESET}")" REPO_NAME
-REPO_NAME=${REPO_NAME:-$TARGET_NAME}
-
-printf "\n${YELLOW}  🔍  Vérification du dépôt '$REPO_NAME' sur GitHub...${RESET}\n"
-HTTP_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "Authorization: token $TOKEN" \
-    "https://api.github.com/repos/$USERNAME/$REPO_NAME")
-
-if [ "$HTTP_CHECK" != "200" ]; then
-    printf "${YELLOW}  ⚠️   Le dépôt '$REPO_NAME' n'existe pas encore.${RESET}\n"
-    read -p "$(printf "${CYAN}${BOLD}  ❓  Créer le dépôt maintenant ? (o/n) : ${RESET}")" CREATE_REPO
-    [[ "$CREATE_REPO" != "o" && "$CREATE_REPO" != "O" ]] && printf "${RED}  🛑  Opération annulée.${RESET}\n\n" && exit 1
-
-    printf "\n${YELLOW}${BOLD}  🔒  Visibilité du dépôt :${RESET}\n"
-    printf "      ${GREEN}1)  🌐  Public  — Visible par tous${RESET}\n"
-    printf "      ${YELLOW}2)  🔐  Privé   — Visible par vous uniquement${RESET}\n"
-    read -p "$(printf "${CYAN}${BOLD}  👉  Votre choix (1 ou 2) : ${RESET}")" VISIBILITY_CHOICE
-
-    if [ "$VISIBILITY_CHOICE" == "2" ]; then
-        JSON_PAYLOAD="{\"name\":\"$REPO_NAME\", \"private\":true}"; VIS_TEXT="Privé 🔐"
-    else
-        JSON_PAYLOAD="{\"name\":\"$REPO_NAME\", \"private\":false}"; VIS_TEXT="Public 🌐"
-    fi
-
-    printf "${YELLOW}  ⏳  Création du dépôt $VIS_TEXT...${RESET}\n"
-    HTTP_CREATE=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Authorization: token $TOKEN" -d "$JSON_PAYLOAD" \
-        https://api.github.com/user/repos)
-
-    [ "$HTTP_CREATE" != "201" ] && printf "${RED}${BOLD}  ❌  Impossible de créer le dépôt. Code : $HTTP_CREATE${RESET}\n\n" && exit 1
-    printf "${GREEN}  ✅  Dépôt $VIS_TEXT créé avec succès.${RESET}\n"
-else
-    printf "${GREEN}  ✅  Dépôt trouvé — upload direct.${RESET}\n"
-fi
-
-printf "\n${YELLOW}  ⏳  Préparation des fichiers...${RESET}\n"
-rm -rf "$TERMUX_PATH"
-
-if [ -d "$FULL_TARGET" ]; then
-    cp -r "$FULL_TARGET" "$TERMUX_PATH"
-else
-    mkdir -p "$TERMUX_PATH"
-    cp "$FULL_TARGET" "$TERMUX_PATH/"
-fi
-
-printf "${YELLOW}  ⚙️   Initialisation de Git...${RESET}\n"
-cd "$TERMUX_PATH" || exit
-git init > /dev/null 2>&1
-git config user.name  "$USERNAME"
-git config user.email "$EMAIL"
-git add .
-git commit -m "Upload automatique via gitup" > /dev/null 2>&1
-git branch -M main
-git remote add origin "https://${TOKEN}@github.com/${USERNAME}/${REPO_NAME}.git"
-
-printf "${YELLOW}  🚀  Upload de '$TARGET_NAME' vers GitHub...${RESET}\n"
-if git push -u origin main -f 2>/dev/null; then
-    printf "\n${GREEN}${BOLD}  ✅  Succès ! '$TARGET_NAME' → dépôt '$REPO_NAME'.${RESET}\n"
-    rm -rf "$TERMUX_PATH"
-    printf "${GREEN}  🧹  Fichiers temporaires supprimés.${RESET}\n\n"
-else
-    printf "\n${RED}${BOLD}  ❌  Échec de l'upload.${RESET}\n"
-    printf "${YELLOW}  💾  Fichiers temporaires conservés : $TERMUX_PATH${RESET}\n\n"
-fi
-TOOLEOF
+# ── gitup ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBCT0xEPSdcMDMzWzFtJzsgUkVTRVQ9J1wwMzNbMG0nCnNvdXJjZSAiJEhPTUUvLmdpdGh1Yl9jb25maWciIHx8IHsgcHJpbnRmICIke1JFRH0gIOKdjCAgQ29uZmlnIGludHJvdXZhYmxlLiBMYW5jZXogZ2l0c3dpdGNoIG91IHLDqWluc3RhbGxlei4ke1JFU0VUfVxuIjsgZXhpdCAxOyB9CkJBU0VfRElSPSIvc3RvcmFnZS9lbXVsYXRlZC8wIgpwcmludGYgIlxuJHtDWUFOfSR7Qk9MRH3ilZTilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZcke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICR7WUVMTE9XfSR7Qk9MRH3wn5OkICBHSVRIVUIgVVBMT0FERVIg4oCUIE1vZGUgSW50ZWxsaWdlbnQke1JFU0VUfSAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZrilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZ0ke1JFU0VUfVxuXG4iCnByaW50ZiAiJHtDWUFOfSAg8J+RpCAgQ29tcHRlIGFjdGlmIDogJHtCT0xEfSRVU0VSTkFNRSR7UkVTRVR9XG5cbiIKd2hpbGUgdHJ1ZTsgZG8KICAgIHJlYWQgLXAgIiQocHJpbnRmICIke0NZQU59JHtCT0xEfSAg8J+TgiAgRG9zc2llciBvdSBmaWNoaWVyIMOgIHVwbG9hZGVyIDogJHtSRVNFVH0iKSIgVVNFUl9QQVRICiAgICBbIC16ICIkVVNFUl9QQVRIIiBdICYmIHByaW50ZiAiJHtZRUxMT1d9ICDimqDvuI8gICBMZSBub20gbmUgcGV1dCBwYXMgw6p0cmUgdmlkZS4ke1JFU0VUfVxuIiAmJiBjb250aW51ZQogICAgRlVMTF9UQVJHRVQ9IiRCQVNFX0RJUi8kVVNFUl9QQVRIIgogICAgWyAtZSAiJEZVTExfVEFSR0VUIiBdICYmIGJyZWFrCiAgICBwcmludGYgIiR7UkVEfSAg4pqg77iPICAgSW50cm91dmFibGUgOiAnJEZVTExfVEFSR0VUJyBuJ2V4aXN0ZSBwYXMuJHtSRVNFVH1cbiIKZG9uZQpUQVJHRVRfTkFNRT0kKGJhc2VuYW1lICIkRlVMTF9UQVJHRVQiKQpURVJNVVhfUEFUSD0iJEhPTUUvJHtUQVJHRVRfTkFNRX1fZ2l0aHViIgpyZWFkIC1wICIkKHByaW50ZiAiJHtDWUFOfSR7Qk9MRH0gIPCfj7fvuI8gICBOb20gZHUgZMOpcMO0dCAodmlkZSA9ICckVEFSR0VUX05BTUUnKSA6ICR7UkVTRVR9IikiIFJFUE9fTkFNRQpSRVBPX05BTUU9IiR7UkVQT19OQU1FOi0kVEFSR0VUX05BTUV9IgpwcmludGYgIlxuJHtZRUxMT1d9ICDwn5SNICBWw6lyaWZpY2F0aW9uIGR1IGTDqXDDtHQgJyRSRVBPX05BTUUnIHN1ciBHaXRIdWIuLi4ke1JFU0VUfVxuIgpIVFRQX0NIRUNLPSQoY3VybCAtcyAtbyAvZGV2L251bGwgLXcgIiV7aHR0cF9jb2RlfSIgLUggIkF1dGhvcml6YXRpb246IHRva2VuICRUT0tFTiIgImh0dHBzOi8vYXBpLmdpdGh1Yi5jb20vcmVwb3MvJFVTRVJOQU1FLyRSRVBPX05BTUUiKQppZiBbICIkSFRUUF9DSEVDSyIgIT0gIjIwMCIgXTsgdGhlbgogICAgcHJpbnRmICIke1lFTExPV30gIOKaoO+4jyAgIExlIGTDqXDDtHQgJyRSRVBPX05BTUUnIG4nZXhpc3RlIHBhcyBlbmNvcmUuJHtSRVNFVH1cbiIKICAgIHJlYWQgLXAgIiQocHJpbnRmICIke0NZQU59JHtCT0xEfSAg4p2TICBDcsOpZXIgbGUgZMOpcMO0dCBtYWludGVuYW50ID8gKG8vbikgOiAke1JFU0VUfSIpIiBDUkVBVEVfUkVQTwogICAgW1sgIiRDUkVBVEVfUkVQTyIgIT0gIm8iICYmICIkQ1JFQVRFX1JFUE8iICE9ICJPIiBdXSAmJiBwcmludGYgIiR7UkVEfSAg8J+bkSAgT3DDqXJhdGlvbiBhbm51bMOpZS4ke1JFU0VUfVxuXG4iICYmIGV4aXQgMQogICAgcHJpbnRmICJcbiR7WUVMTE9XfSR7Qk9MRH0gIPCflJIgIFZpc2liaWxpdMOpIGR1IGTDqXDDtHQgOiR7UkVTRVR9XG4iCiAgICBwcmludGYgIiAgICAgICR7R1JFRU59MSkgIPCfjJAgIFB1YmxpYyAg4oCUIFZpc2libGUgcGFyIHRvdXMke1JFU0VUfVxuIgogICAgcHJpbnRmICIgICAgICAke1lFTExPV30yKSAg8J+UkCAgUHJpdsOpICAg4oCUIFZpc2libGUgcGFyIHZvdXMgdW5pcXVlbWVudCR7UkVTRVR9XG4iCiAgICByZWFkIC1wICIkKHByaW50ZiAiJHtDWUFOfSR7Qk9MRH0gIPCfkYkgIFZvdHJlIGNob2l4ICgxIG91IDIpIDogJHtSRVNFVH0iKSIgVklTSUJJTElUWV9DSE9JQ0UKICAgIGlmIFsgIiRWSVNJQklMSVRZX0NIT0lDRSIgPT0gIjIiIF07IHRoZW4KICAgICAgICBKU09OX1BBWUxPQUQ9IntcIm5hbWVcIjpcIiRSRVBPX05BTUVcIiwgXCJwcml2YXRlXCI6dHJ1ZX0iOyAgVklTX1RFWFQ9IlByaXbDqSDwn5SQIgogICAgZWxzZQogICAgICAgIEpTT05fUEFZTE9BRD0ie1wibmFtZVwiOlwiJFJFUE9fTkFNRVwiLCBcInByaXZhdGVcIjpmYWxzZX0iOyBWSVNfVEVYVD0iUHVibGljIPCfjJAiCiAgICBmaQogICAgcHJpbnRmICIke1lFTExPV30gIOKPsyAgQ3LDqWF0aW9uIGR1IGTDqXDDtHQgJFZJU19URVhULi4uJHtSRVNFVH1cbiIKICAgIEhUVFBfQ1JFQVRFPSQoY3VybCAtcyAtbyAvZGV2L251bGwgLXcgIiV7aHR0cF9jb2RlfSIgLUggIkF1dGhvcml6YXRpb246IHRva2VuICRUT0tFTiIgLWQgIiRKU09OX1BBWUxPQUQiIGh0dHBzOi8vYXBpLmdpdGh1Yi5jb20vdXNlci9yZXBvcykKICAgIFsgIiRIVFRQX0NSRUFURSIgIT0gIjIwMSIgXSAmJiBwcmludGYgIiR7UkVEfSR7Qk9MRH0gIOKdjCAgSW1wb3NzaWJsZSBkZSBjcsOpZXIgbGUgZMOpcMO0dC4gQ29kZSA6ICRIVFRQX0NSRUFURSR7UkVTRVR9XG5cbiIgJiYgZXhpdCAxCiAgICBwcmludGYgIiR7R1JFRU59ICDinIUgIETDqXDDtHQgJFZJU19URVhUIGNyw6nDqSBhdmVjIHN1Y2PDqHMuJHtSRVNFVH1cbiIKZWxzZQogICAgcHJpbnRmICIke0dSRUVOfSAg4pyFICBEw6lww7R0IHRyb3V2w6kg4oCUIHVwbG9hZCBkaXJlY3QuJHtSRVNFVH1cbiIKZmkKcHJpbnRmICJcbiR7WUVMTE9XfSAg4o+zICBQcsOpcGFyYXRpb24gZGVzIGZpY2hpZXJzLi4uJHtSRVNFVH1cbiIKcm0gLXJmICIkVEVSTVVYX1BBVEgiCmlmIFsgLWQgIiRGVUxMX1RBUkdFVCIgXTsgdGhlbiBjcCAtciAiJEZVTExfVEFSR0VUIiAiJFRFUk1VWF9QQVRIIgplbHNlIG1rZGlyIC1wICIkVEVSTVVYX1BBVEgiOyBjcCAiJEZVTExfVEFSR0VUIiAiJFRFUk1VWF9QQVRILyI7IGZpCnByaW50ZiAiJHtZRUxMT1d9ICDimpnvuI8gICBJbml0aWFsaXNhdGlvbiBkZSBHaXQuLi4ke1JFU0VUfVxuIgpjZCAiJFRFUk1VWF9QQVRIIiB8fCBleGl0CmdpdCBpbml0ID4gL2Rldi9udWxsIDI+JjEKZ2l0IGNvbmZpZyB1c2VyLm5hbWUgIiRVU0VSTkFNRSI7IGdpdCBjb25maWcgdXNlci5lbWFpbCAiJEVNQUlMIgpnaXQgYWRkIC4KZ2l0IGNvbW1pdCAtbSAiVXBsb2FkIGF1dG9tYXRpcXVlIHZpYSBnaXR1cCIgPiAvZGV2L251bGwgMj4mMQpnaXQgYnJhbmNoIC1NIG1haW4KZ2l0IHJlbW90ZSBhZGQgb3JpZ2luICJodHRwczovLyR7VE9LRU59QGdpdGh1Yi5jb20vJHtVU0VSTkFNRX0vJHtSRVBPX05BTUV9LmdpdCIKcHJpbnRmICIke1lFTExPV30gIPCfmoAgIFVwbG9hZCBkZSAnJFRBUkdFVF9OQU1FJyB2ZXJzIEdpdEh1Yi4uLiR7UkVTRVR9XG4iCmlmIGdpdCBwdXNoIC11IG9yaWdpbiBtYWluIC1mIDI+L2Rldi9udWxsOyB0aGVuCiAgICBwcmludGYgIlxuJHtHUkVFTn0ke0JPTER9ICDinIUgIFN1Y2PDqHMgISAnJFRBUkdFVF9OQU1FJyDihpIgZMOpcMO0dCAnJFJFUE9fTkFNRScuJHtSRVNFVH1cbiIKICAgIHJtIC1yZiAiJFRFUk1VWF9QQVRIIjsgcHJpbnRmICIke0dSRUVOfSAg8J+nuSAgRmljaGllcnMgdGVtcG9yYWlyZXMgc3VwcHJpbcOpcy4ke1JFU0VUfVxuXG4iCmVsc2UKICAgIHByaW50ZiAiXG4ke1JFRH0ke0JPTER9ICDinYwgIMOJY2hlYyBkZSBsJ3VwbG9hZC4ke1JFU0VUfVxuIgogICAgcHJpbnRmICIke1lFTExPV30gIPCfkr4gIEZpY2hpZXJzIHRlbXBvcmFpcmVzIGNvbnNlcnbDqXMgOiAkVEVSTVVYX1BBVEgke1JFU0VUfVxuXG4iCmZp" | base64 -d > "$_T"
 install_or_update "gitup" "$_T"; rm -f "$_T"
 
-# ─────────────────────────────────────────────
-#  gitget
-# ─────────────────────────────────────────────
-_T=$(mktemp); cat << 'TOOLEOF' > "$_T"
-#!/bin/bash
-
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
-
-source "$HOME/.github_config" || { printf "${RED}  ❌  Config introuvable.${RESET}\n"; exit 1; }
-
-DOWNLOAD_DIR="/storage/emulated/0/Download"
-GITHUB_DIR="/storage/emulated/0/github"
-
-printf "\n${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}📥  GITHUB GET — Téléchargement de dépôt${RESET}     ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}\n\n"
-printf "${CYAN}  👤  Compte actif : ${BOLD}$USERNAME${RESET}\n\n"
-
-read -p "$(printf "${CYAN}${BOLD}  🏷️   Nom du dépôt à télécharger : ${RESET}")" REPO_NAME
-[ -z "$REPO_NAME" ] && printf "${RED}  ⚠️   Le nom ne peut pas être vide.${RESET}\n\n" && exit 1
-
-printf "\n${YELLOW}${BOLD}  📦  Mode de téléchargement :${RESET}\n"
-printf "      ${GREEN}1)  📦  ZIP    — Rapide, sans historique Git${RESET}\n"
-printf "      ${CYAN}2)  🔄  Clone  — Complet avec mémoire Git${RESET}\n"
-read -p "$(printf "${CYAN}${BOLD}  👉  Votre choix (1 ou 2) : ${RESET}")" MODE_CHOICE
-printf "\n"
-
-[[ "$MODE_CHOICE" != "1" && "$MODE_CHOICE" != "2" ]] && printf "${RED}  ⚠️   Choix invalide.${RESET}\n\n" && exit 1
-
-if [ "$MODE_CHOICE" == "2" ]; then
-    mkdir -p "$GITHUB_DIR"
-    TARGET_PATH="$GITHUB_DIR/$REPO_NAME"
-    [ -d "$TARGET_PATH" ] && printf "${YELLOW}  ⚠️   Le dossier '$REPO_NAME' existe déjà.${RESET}\n\n" && exit 1
-    printf "${YELLOW}  ⏳  Clonage de '$REPO_NAME'...${RESET}\n"
-    if gh repo clone "$USERNAME/$REPO_NAME" "$TARGET_PATH" > /dev/null 2>&1; then
-        printf "\n${GREEN}${BOLD}  ✅  Clonage réussi !${RESET}\n"
-        printf "${GREEN}  📂  Emplacement : $TARGET_PATH${RESET}\n\n"
-    else
-        printf "\n${RED}${BOLD}  ❌  Échec du clonage.${RESET}\n\n"
-    fi
-else
-    TARGET_FILE="$DOWNLOAD_DIR/$REPO_NAME.zip"
-    printf "${YELLOW}  ⏳  Téléchargement de '$REPO_NAME' en ZIP...${RESET}\n"
-    if gh repo archive "$USERNAME/$REPO_NAME" --format zip --output "$TARGET_FILE" > /dev/null 2>&1; then
-        printf "\n${GREEN}${BOLD}  ✅  Téléchargement réussi !${RESET}\n"
-        printf "${GREEN}  📂  Emplacement : $TARGET_FILE${RESET}\n\n"
-    else
-        printf "\n${RED}${BOLD}  ❌  Échec. Dépôt introuvable ou accès refusé.${RESET}\n\n"
-    fi
-fi
-TOOLEOF
+# ── gitget ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBCT0xEPSdcMDMzWzFtJzsgUkVTRVQ9J1wwMzNbMG0nCnNvdXJjZSAiJEhPTUUvLmdpdGh1Yl9jb25maWciIHx8IHsgcHJpbnRmICIke1JFRH0gIOKdjCAgQ29uZmlnIGludHJvdXZhYmxlLiR7UkVTRVR9XG4iOyBleGl0IDE7IH0KRE9XTkxPQURfRElSPSIvc3RvcmFnZS9lbXVsYXRlZC8wL0Rvd25sb2FkIgpHSVRIVUJfRElSPSIvc3RvcmFnZS9lbXVsYXRlZC8wL2dpdGh1YiIKcHJpbnRmICJcbiR7Q1lBTn0ke0JPTER94pWU4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWXJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9ICAke1lFTExPV30ke0JPTER98J+TpSAgR0lUSFVCIEdFVCDigJQgVMOpbMOpY2hhcmdlbWVudCBkZSBkw6lww7R0JHtSRVNFVH0gICAgICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVmuKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVnSR7UkVTRVR9XG5cbiIKcHJpbnRmICIke0NZQU59ICDwn5GkICBDb21wdGUgYWN0aWYgOiAke0JPTER9JFVTRVJOQU1FJHtSRVNFVH1cblxuIgpwcmludGYgIiR7WUVMTE9XfSAg8J+SoSAgRm9ybWF0IGFjY2VwdMOpIDogJ3JlcG8nICh2b3RyZSBjb21wdGUpIG91ICd1c2VyL3JlcG8nIChuJ2ltcG9ydGUgcXVpKSR7UkVTRVR9XG5cbiIKcmVhZCAtcCAiJChwcmludGYgIiR7Q1lBTn0ke0JPTER9ICDwn4+377iPICAgRMOpcMO0dCDDoCB0w6lsw6ljaGFyZ2VyIDogJHtSRVNFVH0iKSIgUkVQT19JTlBVVApbIC16ICIkUkVQT19JTlBVVCIgXSAmJiBwcmludGYgIiR7UkVEfSAg4pqg77iPICAgTGUgbm9tIG5lIHBldXQgcGFzIMOqdHJlIHZpZGUuJHtSRVNFVH1cblxuIiAmJiBleGl0IDEKaWYgW1sgIiRSRVBPX0lOUFVUIiA9PSAqLyogXV07IHRoZW4gRlVMTF9SRVBPPSIkUkVQT19JTlBVVCI7IFJFUE9fTkFNRT0iJHtSRVBPX0lOUFVUIyMqL30iCmVsc2UgRlVMTF9SRVBPPSIkVVNFUk5BTUUvJFJFUE9fSU5QVVQiOyBSRVBPX05BTUU9IiRSRVBPX0lOUFVUIjsgZmkKSFRUUF9DSEVDSz0kKGN1cmwgLXMgLW8gL2Rldi9udWxsIC13ICIle2h0dHBfY29kZX0iIC1IICJBdXRob3JpemF0aW9uOiB0b2tlbiAkVE9LRU4iICJodHRwczovL2FwaS5naXRodWIuY29tL3JlcG9zLyRGVUxMX1JFUE8iKQppZiBbICIkSFRUUF9DSEVDSyIgIT0gIjIwMCIgXTsgdGhlbgogICAgcHJpbnRmICIke1JFRH0gIOKdjCAgRMOpcMO0dCAnJEZVTExfUkVQTycgaW50cm91dmFibGUgb3UgYWNjw6hzIHJlZnVzw6kuJHtSRVNFVH1cblxuIjsgZXhpdCAxCmZpCnByaW50ZiAiJHtHUkVFTn0gIOKchSAgRMOpcMO0dCB0cm91dsOpIDogJEZVTExfUkVQTyR7UkVTRVR9XG5cbiIKcHJpbnRmICIke1lFTExPV30ke0JPTER9ICDwn5OmICBNb2RlIGRlIHTDqWzDqWNoYXJnZW1lbnQgOiR7UkVTRVR9XG4iCnByaW50ZiAiICAgICAgJHtHUkVFTn0xKSAg8J+TpiAgWklQICAgIOKAlCBSYXBpZGUsIHNhbnMgaGlzdG9yaXF1ZSBHaXQke1JFU0VUfVxuIgpwcmludGYgIiAgICAgICR7Q1lBTn0yKSAg8J+UhCAgQ2xvbmUgIOKAlCBDb21wbGV0IGF2ZWMgbcOpbW9pcmUgR2l0JHtSRVNFVH1cbiIKcmVhZCAtcCAiJChwcmludGYgIiR7Q1lBTn0ke0JPTER9ICDwn5GJICBWb3RyZSBjaG9peCAoMSBvdSAyKSA6ICR7UkVTRVR9IikiIE1PREVfQ0hPSUNFOyBwcmludGYgIlxuIgpbWyAiJE1PREVfQ0hPSUNFIiAhPSAiMSIgJiYgIiRNT0RFX0NIT0lDRSIgIT0gIjIiIF1dICYmIHByaW50ZiAiJHtSRUR9ICDimqDvuI8gICBDaG9peCBpbnZhbGlkZS4ke1JFU0VUfVxuXG4iICYmIGV4aXQgMQppZiBbICIkTU9ERV9DSE9JQ0UiID09ICIyIiBdOyB0aGVuCiAgICBta2RpciAtcCAiJEdJVEhVQl9ESVIiCiAgICBUQVJHRVRfUEFUSD0iJEdJVEhVQl9ESVIvJFJFUE9fTkFNRSIKICAgIFsgLWQgIiRUQVJHRVRfUEFUSCIgXSAmJiBwcmludGYgIiR7WUVMTE9XfSAg4pqg77iPICAgTGUgZG9zc2llciAnJFJFUE9fTkFNRScgZXhpc3RlIGTDqWrDoCBkYW5zICRHSVRIVUJfRElSLiR7UkVTRVR9XG5cbiIgJiYgZXhpdCAxCiAgICBwcmludGYgIiR7WUVMTE9XfSAg4o+zICBDbG9uYWdlIGRlICckRlVMTF9SRVBPJy4uLiR7UkVTRVR9XG4iCiAgICBpZiBnaCByZXBvIGNsb25lICIkRlVMTF9SRVBPIiAiJFRBUkdFVF9QQVRIIiA+IC9kZXYvbnVsbCAyPiYxOyB0aGVuCiAgICAgICAgaWYgW1sgIiRGVUxMX1JFUE8iID09ICIkVVNFUk5BTUUvIiogXV07IHRoZW4KICAgICAgICAgICAgY2QgIiRUQVJHRVRfUEFUSCIgJiYgZ2l0IHJlbW90ZSBzZXQtdXJsIG9yaWdpbiAiaHR0cHM6Ly8ke1RPS0VOfUBnaXRodWIuY29tLyR7RlVMTF9SRVBPfS5naXQiID4gL2Rldi9udWxsIDI+JjEKICAgICAgICBmaQogICAgICAgIHByaW50ZiAiXG4ke0dSRUVOfSR7Qk9MRH0gIOKchSAgQ2xvbmFnZSByw6l1c3NpICEke1JFU0VUfVxuIgogICAgICAgIHByaW50ZiAiJHtHUkVFTn0gIPCfk4IgIEVtcGxhY2VtZW50IDogJFRBUkdFVF9QQVRIJHtSRVNFVH1cblxuIgogICAgZWxzZQogICAgICAgIHByaW50ZiAiXG4ke1JFRH0ke0JPTER9ICDinYwgIMOJY2hlYyBkdSBjbG9uYWdlLiR7UkVTRVR9XG5cbiIKICAgIGZpCmVsc2UKICAgIFRBUkdFVF9GSUxFPSIkRE9XTkxPQURfRElSLyR7UkVQT19OQU1FfS56aXAiCiAgICBwcmludGYgIiR7WUVMTE9XfSAg4o+zICBUw6lsw6ljaGFyZ2VtZW50IGRlICckRlVMTF9SRVBPJyBlbiBaSVAuLi4ke1JFU0VUfVxuIgogICAgaWYgZ2ggcmVwbyBhcmNoaXZlICIkRlVMTF9SRVBPIiAtLWZvcm1hdCB6aXAgLS1vdXRwdXQgIiRUQVJHRVRfRklMRSIgPiAvZGV2L251bGwgMj4mMTsgdGhlbgogICAgICAgIHByaW50ZiAiXG4ke0dSRUVOfSR7Qk9MRH0gIOKchSAgVMOpbMOpY2hhcmdlbWVudCByw6l1c3NpICEke1JFU0VUfVxuIgogICAgICAgIHByaW50ZiAiJHtHUkVFTn0gIPCfk4IgIEVtcGxhY2VtZW50IDogJFRBUkdFVF9GSUxFJHtSRVNFVH1cblxuIgogICAgZWxzZQogICAgICAgIHByaW50ZiAiXG4ke1JFRH0ke0JPTER9ICDinYwgIMOJY2hlYy4gRMOpcMO0dCBpbnRyb3V2YWJsZSBvdSBhY2PDqHMgcmVmdXPDqS4ke1JFU0VUfVxuXG4iCiAgICBmaQpmaQ==" | base64 -d > "$_T"
 install_or_update "gitget" "$_T"; rm -f "$_T"
 
-# ─────────────────────────────────────────────
-#  gitlist
-# ─────────────────────────────────────────────
-_T=$(mktemp); cat << 'TOOLEOF' > "$_T"
-#!/bin/bash
-
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; MAGENTA='\033[0;35m'; BOLD='\033[1m'; RESET='\033[0m'
-
-source "$HOME/.github_config" || { printf "${RED}  ❌  Config introuvable.${RESET}\n"; exit 1; }
-
-printf "\n${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}📋  GITHUB LIST — Vos dépôts${RESET}                 ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}\n\n"
-printf "${CYAN}  👤  Compte actif : ${BOLD}$USERNAME${RESET}\n\n"
-
-printf "${YELLOW}${BOLD}  🔒  Filtre :${RESET}\n"
-printf "      ${GREEN}1)  🌐  Tous les dépôts${RESET}\n"
-printf "      ${CYAN}2)  🌐  Publics uniquement${RESET}\n"
-printf "      ${YELLOW}3)  🔐  Privés uniquement${RESET}\n"
-read -p "$(printf "${CYAN}${BOLD}  👉  Votre choix (1/2/3, vide = tous) : ${RESET}")" FILTER_CHOICE
-printf "\n"
-
-case "$FILTER_CHOICE" in
-    2) FILTER="public"  ;;
-    3) FILTER="private" ;;
-    *) FILTER="all"     ;;
-esac
-
-printf "${YELLOW}  ⏳  Récupération de vos dépôts...${RESET}\n\n"
-
-REPOS=$(curl -s \
-    -H "Authorization: token $TOKEN" \
-    -H "Accept: application/vnd.github.v3+json" \
-    "https://api.github.com/user/repos?per_page=100&type=$FILTER&sort=updated")
-
-COUNT=$(echo "$REPOS" | grep -o '"full_name"' | wc -l)
-
-if [ "$COUNT" -eq 0 ]; then
-    printf "${RED}  ❌  Aucun dépôt trouvé.${RESET}\n\n"; exit 0
-fi
-
-printf "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
-
-echo "$REPOS" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for r in data:
-    name    = r.get('name','')
-    private = r.get('private', False)
-    updated = r.get('updated_at','')[:10]
-    badge   = '\033[1;33m🔐 Privé \033[0m' if private else '\033[0;32m🌐 Public\033[0m'
-    print(f'  {badge}  \033[1m{name:<30}\033[0m  \033[0;36mmis à jour : {updated}\033[0m')
-"
-
-printf "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
-printf "${GREEN}${BOLD}  📊  Total : $COUNT dépôt(s) trouvé(s).${RESET}\n\n"
-TOOLEOF
+# ── gitlist ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBNQUdFTlRBPSdcMDMzWzA7MzVtJzsgQk9MRD0nXDAzM1sxbSc7IFJFU0VUPSdcMDMzWzBtJwpzb3VyY2UgIiRIT01FLy5naXRodWJfY29uZmlnIiB8fCB7IHByaW50ZiAiJHtSRUR9ICDinYwgIENvbmZpZyBpbnRyb3V2YWJsZS4ke1JFU0VUfVxuIjsgZXhpdCAxOyB9CnByaW50ZiAiXG4ke0NZQU59JHtCT0xEfeKVlOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVlyR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtZRUxMT1d9JHtCT0xEffCfk4sgIEdJVEhVQiBMSVNUIOKAlCBWb3MgZMOpcMO0dHMke1JFU0VUfSAgICAgICAgICAgICAgICAgJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWa4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWdJHtSRVNFVH1cblxuIgpwcmludGYgIiR7Q1lBTn0gIPCfkaQgIENvbXB0ZSBhY3RpZiA6ICR7Qk9MRH0kVVNFUk5BTUUke1JFU0VUfVxuXG4iCnByaW50ZiAiJHtZRUxMT1d9JHtCT0xEfSAg8J+UkiAgRmlsdHJlIDoke1JFU0VUfVxuIgpwcmludGYgIiAgICAgICR7R1JFRU59MSkgIPCfjJAgIFRvdXMgbGVzIGTDqXDDtHRzJHtSRVNFVH1cbiIKcHJpbnRmICIgICAgICAke0NZQU59MikgIPCfjJAgIFB1YmxpY3MgdW5pcXVlbWVudCR7UkVTRVR9XG4iCnByaW50ZiAiICAgICAgJHtZRUxMT1d9MykgIPCflJAgIFByaXbDqXMgdW5pcXVlbWVudCR7UkVTRVR9XG4iCnJlYWQgLXAgIiQocHJpbnRmICIke0NZQU59JHtCT0xEfSAg8J+RiSAgVm90cmUgY2hvaXggKDEvMi8zLCB2aWRlID0gdG91cykgOiAke1JFU0VUfSIpIiBGSUxURVJfQ0hPSUNFOyBwcmludGYgIlxuIgpjYXNlICIkRklMVEVSX0NIT0lDRSIgaW4gMikgRklMVEVSPSJwdWJsaWMiOzsgMykgRklMVEVSPSJwcml2YXRlIjs7ICopIEZJTFRFUj0iYWxsIjs7IGVzYWMKcHJpbnRmICIke1lFTExPV30gIOKPsyAgUsOpY3Vww6lyYXRpb24gZGUgdm9zIGTDqXDDtHRzLi4uJHtSRVNFVH1cblxuIgpSRVBPUz0kKGN1cmwgLXMgLUggIkF1dGhvcml6YXRpb246IHRva2VuICRUT0tFTiIgLUggIkFjY2VwdDogYXBwbGljYXRpb24vdm5kLmdpdGh1Yi52Mytqc29uIiBcCiAgICAiaHR0cHM6Ly9hcGkuZ2l0aHViLmNvbS91c2VyL3JlcG9zP3Blcl9wYWdlPTEwMCZ0eXBlPSRGSUxURVImc29ydD11cGRhdGVkIikKQ09VTlQ9JChlY2hvICIkUkVQT1MiIHwgZ3JlcCAtbyAnImZ1bGxfbmFtZSInIHwgd2MgLWwpCmlmIFsgIiRDT1VOVCIgLWVxIDAgXTsgdGhlbiBwcmludGYgIiR7UkVEfSAg4p2MICBBdWN1biBkw6lww7R0IHRyb3V2w6kuJHtSRVNFVH1cblxuIjsgZXhpdCAwOyBmaQpwcmludGYgIiR7Q1lBTn0ke0JPTER94pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSBJHtSRVNFVH1cbiIKZWNobyAiJFJFUE9TIiB8IHB5dGhvbjMgLWMgIgppbXBvcnQgc3lzLCBqc29uCmRhdGEgPSBqc29uLmxvYWQoc3lzLnN0ZGluKQpmb3IgciBpbiBkYXRhOgogICAgbmFtZSAgICA9IHIuZ2V0KCduYW1lJywnJykKICAgIHByaXZhdGUgPSByLmdldCgncHJpdmF0ZScsIEZhbHNlKQogICAgdXBkYXRlZCA9IHIuZ2V0KCd1cGRhdGVkX2F0JywnJylbOjEwXQogICAgYmFkZ2UgICA9ICdcMDMzWzE7MzNt8J+UkCBQcml2w6kgXDAzM1swbScgaWYgcHJpdmF0ZSBlbHNlICdcMDMzWzA7MzJt8J+MkCBQdWJsaWNcMDMzWzBtJwogICAgcHJpbnQoZicgIHtiYWRnZX0gIFwwMzNbMW17bmFtZTo8MzB9XDAzM1swbSAgXDAzM1swOzM2bW1pcyDDoCBqb3VyIDoge3VwZGF0ZWR9XDAzM1swbScpCiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgSR7UkVTRVR9XG4iCnByaW50ZiAiJHtHUkVFTn0ke0JPTER9ICDwn5OKICBUb3RhbCA6ICRDT1VOVCBkw6lww7R0KHMpIHRyb3V2w6kocykuJHtSRVNFVH1cblxuIg==" | base64 -d > "$_T"
 install_or_update "gitlist" "$_T"; rm -f "$_T"
 
-# ─────────────────────────────────────────────
-#  gitpush
-# ─────────────────────────────────────────────
-_T=$(mktemp); cat << 'TOOLEOF' > "$_T"
-#!/bin/bash
-
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
-
-source "$HOME/.github_config" || { printf "${RED}  ❌  Config introuvable.${RESET}\n"; exit 1; }
-
-GITHUB_DIR="/storage/emulated/0/github"
-
-printf "\n${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}🚀  GITHUB PUSH — Envoi des modifications${RESET}     ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}\n\n"
-printf "${CYAN}  👤  Compte actif : ${BOLD}$USERNAME${RESET}\n\n"
-
-if [ ! -d "$GITHUB_DIR" ] || [ -z "$(ls -A "$GITHUB_DIR" 2>/dev/null)" ]; then
-    printf "${RED}  ❌  Aucun dépôt cloné trouvé dans '$GITHUB_DIR'.${RESET}\n"
-    printf "${YELLOW}  💡  Conseil : utilisez 'gitget' mode 2 pour cloner un dépôt.${RESET}\n\n"
-    exit 1
-fi
-
-printf "${YELLOW}${BOLD}  📂  Dépôts disponibles :${RESET}\n"
-INDEX=1; REPOS_LIST=()
-for DIR in "$GITHUB_DIR"/*/; do
-    REPO_NAME=$(basename "$DIR")
-    REPOS_LIST+=("$REPO_NAME")
-    printf "      ${GREEN}$INDEX)  $REPO_NAME${RESET}\n"
-    ((INDEX++))
-done
-printf "\n"
-
-read -p "$(printf "${CYAN}${BOLD}  👉  Numéro du dépôt à pousser : ${RESET}")" CHOICE
-
-if ! [[ "$CHOICE" =~ ^[0-9]+$ ]] || [ "$CHOICE" -lt 1 ] || [ "$CHOICE" -gt "${#REPOS_LIST[@]}" ]; then
-    printf "${RED}  ⚠️   Choix invalide.${RESET}\n\n"; exit 1
-fi
-
-SELECTED_REPO="${REPOS_LIST[$((CHOICE-1))]}"
-TARGET_PATH="$GITHUB_DIR/$SELECTED_REPO"
-
-read -p "$(printf "${CYAN}${BOLD}  📝  Message de commit (vide = 'Mise à jour automatique') : ${RESET}")" COMMIT_MSG
-COMMIT_MSG="${COMMIT_MSG:-Mise à jour automatique via gitpush}"
-
-printf "\n${YELLOW}  ⚙️   Préparation du commit...${RESET}\n"
-cd "$TARGET_PATH" || exit
-git config user.name  "$USERNAME"
-git config user.email "$EMAIL"
-git remote set-url origin "https://${TOKEN}@github.com/${USERNAME}/${SELECTED_REPO}.git" > /dev/null 2>&1
-git add .
-
-[ -z "$(git status --porcelain)" ] && printf "${YELLOW}  ℹ️   Aucune modification — dépôt déjà à jour.${RESET}\n\n" && exit 0
-
-git commit -m "$COMMIT_MSG" > /dev/null 2>&1
-printf "${YELLOW}  🚀  Envoi vers GitHub...${RESET}\n"
-
-if git push origin main 2>/dev/null || git push origin master 2>/dev/null; then
-    printf "\n${GREEN}${BOLD}  ✅  Modifications envoyées avec succès !${RESET}\n"
-    printf "${GREEN}  📦  Dépôt : '$SELECTED_REPO'${RESET}\n"
-    printf "${GREEN}  💬  Commit : '$COMMIT_MSG'${RESET}\n\n"
-else
-    printf "\n${RED}${BOLD}  ❌  Échec du push.${RESET}\n\n"
-fi
-TOOLEOF
+# ── gitpush ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBCT0xEPSdcMDMzWzFtJzsgUkVTRVQ9J1wwMzNbMG0nCnNvdXJjZSAiJEhPTUUvLmdpdGh1Yl9jb25maWciIHx8IHsgcHJpbnRmICIke1JFRH0gIOKdjCAgQ29uZmlnIGludHJvdXZhYmxlLiR7UkVTRVR9XG4iOyBleGl0IDE7IH0KR0lUSFVCX0RJUj0iL3N0b3JhZ2UvZW11bGF0ZWQvMC9naXRodWIiCnByaW50ZiAiXG4ke0NZQU59JHtCT0xEfeKVlOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVlyR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtZRUxMT1d9JHtCT0xEffCfmoAgIEdJVEhVQiBQVVNIIOKAlCBFbnZvaSBkZXMgbW9kaWZpY2F0aW9ucyR7UkVTRVR9ICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZrilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZ0ke1JFU0VUfVxuXG4iCnByaW50ZiAiJHtDWUFOfSAg8J+RpCAgQ29tcHRlIGFjdGlmIDogJHtCT0xEfSRVU0VSTkFNRSR7UkVTRVR9XG5cbiIKaWYgWyAhIC1kICIkR0lUSFVCX0RJUiIgXSB8fCBbIC16ICIkKGxzIC1BICIkR0lUSFVCX0RJUiIgMj4vZGV2L251bGwpIiBdOyB0aGVuCiAgICBwcmludGYgIiR7UkVEfSAg4p2MICBBdWN1biBkw6lww7R0IGNsb27DqSB0cm91dsOpIGRhbnMgJyRHSVRIVUJfRElSJy4ke1JFU0VUfVxuIgogICAgcHJpbnRmICIke1lFTExPV30gIPCfkqEgIFV0aWxpc2V6ICdnaXRnZXQnIG1vZGUgMiBwb3VyIGNsb25lciB1biBkw6lww7R0LiR7UkVTRVR9XG5cbiI7IGV4aXQgMQpmaQpwcmludGYgIiR7WUVMTE9XfSR7Qk9MRH0gIPCfk4IgIETDqXDDtHRzIGRpc3BvbmlibGVzIDoke1JFU0VUfVxuIgpJTkRFWD0xOyBSRVBPU19MSVNUPSgpCmZvciBESVIgaW4gIiRHSVRIVUJfRElSIi8qLzsgZG8KICAgIFsgLWQgIiRESVIvLmdpdCIgXSB8fCBjb250aW51ZQogICAgUkVQT19OQU1FPSQoYmFzZW5hbWUgIiRESVIiKTsgUkVQT1NfTElTVCs9KCIkUkVQT19OQU1FIikKICAgIENIQU5HRVM9JChnaXQgLUMgIiRESVIiIHN0YXR1cyAtLXBvcmNlbGFpbiAyPi9kZXYvbnVsbCB8IHdjIC1sKQogICAgaWYgWyAiJENIQU5HRVMiIC1ndCAwIF07IHRoZW4KICAgICAgICBwcmludGYgIiAgICAgICR7R1JFRU59JElOREVYKSAgJS0yOHMke1lFTExPV33imqDvuI8gICRDSEFOR0VTIG1vZGlmaWNhdGlvbihzKSR7UkVTRVR9XG4iICIkUkVQT19OQU1FIgogICAgZWxzZQogICAgICAgIHByaW50ZiAiICAgICAgJHtHUkVFTn0kSU5ERVgpICAlLTI4cyR7Q1lBTn3inIUgw4Agam91ciR7UkVTRVR9XG4iICIkUkVQT19OQU1FIgogICAgZmkKICAgICgoSU5ERVgrKykpCmRvbmU7IHByaW50ZiAiXG4iClsgJHsjUkVQT1NfTElTVFtAXX0gLWVxIDAgXSAmJiBwcmludGYgIiR7UkVEfSAg4p2MICBBdWN1biBkw6lww7R0IEdpdCB2YWxpZGUgdHJvdXbDqS4ke1JFU0VUfVxuXG4iICYmIGV4aXQgMQpyZWFkIC1wICIkKHByaW50ZiAiJHtDWUFOfSR7Qk9MRH0gIPCfkYkgIE51bcOpcm8gZHUgZMOpcMO0dCDDoCBwb3Vzc2VyIDogJHtSRVNFVH0iKSIgQ0hPSUNFCmlmICEgW1sgIiRDSE9JQ0UiID1+IF5bMC05XSskIF1dIHx8IFsgIiRDSE9JQ0UiIC1sdCAxIF0gfHwgWyAiJENIT0lDRSIgLWd0ICIkeyNSRVBPU19MSVNUW0BdfSIgXTsgdGhlbgogICAgcHJpbnRmICIke1JFRH0gIOKaoO+4jyAgIENob2l4IGludmFsaWRlLiR7UkVTRVR9XG5cbiI7IGV4aXQgMQpmaQpTRUxFQ1RFRF9SRVBPPSIke1JFUE9TX0xJU1RbJCgoQ0hPSUNFLTEpKV19IjsgVEFSR0VUX1BBVEg9IiRHSVRIVUJfRElSLyRTRUxFQ1RFRF9SRVBPIgpyZWFkIC1wICIkKHByaW50ZiAiJHtDWUFOfSR7Qk9MRH0gIPCfk50gIE1lc3NhZ2UgZGUgY29tbWl0ICh2aWRlID0gJ01pc2Ugw6Agam91ciBhdXRvbWF0aXF1ZScpIDogJHtSRVNFVH0iKSIgQ09NTUlUX01TRwpDT01NSVRfTVNHPSIke0NPTU1JVF9NU0c6LU1pc2Ugw6Agam91ciBhdXRvbWF0aXF1ZSB2aWEgZ2l0cHVzaH0iCnByaW50ZiAiXG4ke1lFTExPV30gIOKame+4jyAgIFByw6lwYXJhdGlvbiBkdSBjb21taXQuLi4ke1JFU0VUfVxuIgpjZCAiJFRBUkdFVF9QQVRIIiB8fCBleGl0CmdpdCBjb25maWcgdXNlci5uYW1lICIkVVNFUk5BTUUiOyBnaXQgY29uZmlnIHVzZXIuZW1haWwgIiRFTUFJTCIKZ2l0IHJlbW90ZSBzZXQtdXJsIG9yaWdpbiAiaHR0cHM6Ly8ke1RPS0VOfUBnaXRodWIuY29tLyR7VVNFUk5BTUV9LyR7U0VMRUNURURfUkVQT30uZ2l0IiA+IC9kZXYvbnVsbCAyPiYxCmdpdCBhZGQgLgppZiBbIC16ICIkKGdpdCBzdGF0dXMgLS1wb3JjZWxhaW4pIiBdOyB0aGVuCiAgICBwcmludGYgIiR7WUVMTE9XfSAg4oS577iPICAgQXVjdW5lIG1vZGlmaWNhdGlvbiDigJQgZMOpcMO0dCBkw6lqw6Agw6Agam91ci4ke1JFU0VUfVxuXG4iOyBleGl0IDAKZmkKZ2l0IGNvbW1pdCAtbSAiJENPTU1JVF9NU0ciID4gL2Rldi9udWxsIDI+JjEKQlJBTkNIPSQoZ2l0IHJldi1wYXJzZSAtLWFiYnJldi1yZWYgSEVBRCAyPi9kZXYvbnVsbCk7IFsgLXogIiRCUkFOQ0giIF0gJiYgQlJBTkNIPSJtYWluIgpwcmludGYgIiR7WUVMTE9XfSAg8J+agCAgRW52b2kgdmVycyBHaXRIdWIgKGJyYW5jaGUgOiAkQlJBTkNIKS4uLiR7UkVTRVR9XG4iCmlmIGdpdCBwdXNoIG9yaWdpbiAiJEJSQU5DSCIgMj4vZGV2L251bGw7IHRoZW4KICAgIHByaW50ZiAiXG4ke0dSRUVOfSR7Qk9MRH0gIOKchSAgTW9kaWZpY2F0aW9ucyBlbnZvecOpZXMgYXZlYyBzdWNjw6hzICEke1JFU0VUfVxuIgogICAgcHJpbnRmICIke0dSRUVOfSAg8J+TpiAgRMOpcMO0dCAgIDogJyRTRUxFQ1RFRF9SRVBPJyR7UkVTRVR9XG4iCiAgICBwcmludGYgIiR7R1JFRU59ICDwn4y/ICBCcmFuY2hlIDogJyRCUkFOQ0gnJHtSRVNFVH1cbiIKICAgIHByaW50ZiAiJHtHUkVFTn0gIPCfkqwgIENvbW1pdCAgOiAnJENPTU1JVF9NU0cnJHtSRVNFVH1cblxuIgplbHNlCiAgICBwcmludGYgIlxuJHtSRUR9JHtCT0xEfSAg4p2MICDDiWNoZWMgZHUgcHVzaC4ke1JFU0VUfVxuIgogICAgcHJpbnRmICIke1lFTExPV30gIPCfkqEgIFbDqXJpZmlleiBxdWUgbGUgdG9rZW4gYSBsYSBwZXJtaXNzaW9uICdyZXBvJy4ke1JFU0VUfVxuXG4iCmZp" | base64 -d > "$_T"
 install_or_update "gitpush" "$_T"; rm -f "$_T"
 
-# ─────────────────────────────────────────────
-#  gitdel
-# ─────────────────────────────────────────────
-_T=$(mktemp); cat << 'TOOLEOF' > "$_T"
-#!/bin/bash
+# ── gitpull ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBCT0xEPSdcMDMzWzFtJzsgUkVTRVQ9J1wwMzNbMG0nCnNvdXJjZSAiJEhPTUUvLmdpdGh1Yl9jb25maWciIHx8IHsgcHJpbnRmICIke1JFRH0gIOKdjCAgQ29uZmlnIGludHJvdXZhYmxlLiR7UkVTRVR9XG4iOyBleGl0IDE7IH0KR0lUSFVCX0RJUj0iL3N0b3JhZ2UvZW11bGF0ZWQvMC9naXRodWIiCnByaW50ZiAiXG4ke0NZQU59JHtCT0xEfeKVlOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVlyR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtZRUxMT1d9JHtCT0xEfeKsh++4jyAgIEdJVEhVQiBQVUxMIOKAlCBSw6ljdXDDqXJhdGlvbiBkZXMgbWlzZXMgw6Agam91ciR7UkVTRVR9ICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZrilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZ0ke1JFU0VUfVxuXG4iCnByaW50ZiAiJHtDWUFOfSAg8J+RpCAgQ29tcHRlIGFjdGlmIDogJHtCT0xEfSRVU0VSTkFNRSR7UkVTRVR9XG5cbiIKaWYgWyAhIC1kICIkR0lUSFVCX0RJUiIgXSB8fCBbIC16ICIkKGxzIC1BICIkR0lUSFVCX0RJUiIgMj4vZGV2L251bGwpIiBdOyB0aGVuCiAgICBwcmludGYgIiR7UkVEfSAg4p2MICBBdWN1biBkw6lww7R0IGNsb27DqSB0cm91dsOpIGRhbnMgJyRHSVRIVUJfRElSJy4ke1JFU0VUfVxuIgogICAgcHJpbnRmICIke1lFTExPV30gIPCfkqEgIFV0aWxpc2V6ICdnaXRnZXQnIG1vZGUgMiBwb3VyIGNsb25lciB1biBkw6lww7R0IGQnYWJvcmQuJHtSRVNFVH1cblxuIjsgZXhpdCAxCmZpCnByaW50ZiAiJHtZRUxMT1d9JHtCT0xEfSAg8J+TgiAgRMOpcMO0dHMgZGlzcG9uaWJsZXMgOiR7UkVTRVR9XG4iCklOREVYPTE7IFJFUE9TX0xJU1Q9KCkKZm9yIERJUiBpbiAiJEdJVEhVQl9ESVIiLyovOyBkbwogICAgWyAtZCAiJERJUi8uZ2l0IiBdIHx8IGNvbnRpbnVlCiAgICBSRVBPX05BTUU9JChiYXNlbmFtZSAiJERJUiIpOyBSRVBPU19MSVNUKz0oIiRSRVBPX05BTUUiKQogICAgQlJBTkNIPSQoZ2l0IC1DICIkRElSIiByZXYtcGFyc2UgLS1hYmJyZXYtcmVmIEhFQUQgMj4vZGV2L251bGwgfHwgZWNobyAiPyIpCiAgICBwcmludGYgIiAgICAgICR7R1JFRU59JElOREVYKSAgJS0yOHMke0NZQU598J+MvyAkQlJBTkNIJHtSRVNFVH1cbiIgIiRSRVBPX05BTUUiCiAgICAoKElOREVYKyspKQpkb25lOyBwcmludGYgIlxuIgpbICR7I1JFUE9TX0xJU1RbQF19IC1lcSAwIF0gJiYgcHJpbnRmICIke1JFRH0gIOKdjCAgQXVjdW4gZMOpcMO0dCBHaXQgdmFsaWRlIHRyb3V2w6kuJHtSRVNFVH1cblxuIiAmJiBleGl0IDEKcmVhZCAtcCAiJChwcmludGYgIiR7Q1lBTn0ke0JPTER9ICDwn5GJICBOdW3DqXJvIGR1IGTDqXDDtHQgw6AgbWV0dHJlIMOgIGpvdXIgKHZpZGUgPSB0b3VzKSA6ICR7UkVTRVR9IikiIENIT0lDRTsgcHJpbnRmICJcbiIKcHVsbF9yZXBvKCkgewogICAgbG9jYWwgcmVwb19uYW1lPSIkMSI7IGxvY2FsIHJlcG9fcGF0aD0iJEdJVEhVQl9ESVIvJHJlcG9fbmFtZSIKICAgIGNkICIkcmVwb19wYXRoIiB8fCByZXR1cm4KICAgIGdpdCByZW1vdGUgc2V0LXVybCBvcmlnaW4gImh0dHBzOi8vJHtUT0tFTn1AZ2l0aHViLmNvbS8ke1VTRVJOQU1FfS8ke3JlcG9fbmFtZX0uZ2l0IiA+IC9kZXYvbnVsbCAyPiYxCiAgICBpZiBbIC1uICIkKGdpdCBzdGF0dXMgLS1wb3JjZWxhaW4gMj4vZGV2L251bGwpIiBdOyB0aGVuCiAgICAgICAgcHJpbnRmICIke1lFTExPV30gIOKaoO+4jyAgICckcmVwb19uYW1lJyBhIGRlcyBtb2RpZmljYXRpb25zIGxvY2FsZXMgbm9uIGNvbW1pdMOpZXMuJHtSRVNFVH1cbiIKICAgICAgICByZWFkIC1wICIkKHByaW50ZiAiJHtDWUFOfSAg4p2TICBNZXR0cmUgZGUgY8O0dMOpIChzdGFzaCkgZXQgY29udGludWVyID8gKG8vbikgOiAke1JFU0VUfSIpIiBET19TVEFTSAogICAgICAgIGlmIFtbICIkRE9fU1RBU0giID09ICJvIiB8fCAiJERPX1NUQVNIIiA9PSAiTyIgXV07IHRoZW4KICAgICAgICAgICAgZ2l0IHN0YXNoID4gL2Rldi9udWxsIDI+JjE7IHByaW50ZiAiJHtZRUxMT1d9ICAgICBNb2RpZmljYXRpb25zIG1pc2VzIGRlIGPDtHTDqSAoZ2l0IHN0YXNoKS4ke1JFU0VUfVxuIgogICAgICAgIGVsc2UgcHJpbnRmICIke1lFTExPV30gICAgIFB1bGwgaWdub3LDqSBwb3VyICckcmVwb19uYW1lJy4ke1JFU0VUfVxuXG4iOyByZXR1cm47IGZpCiAgICBmaQogICAgQlJBTkNIPSQoZ2l0IHJldi1wYXJzZSAtLWFiYnJldi1yZWYgSEVBRCAyPi9kZXYvbnVsbCk7IFsgLXogIiRCUkFOQ0giIF0gJiYgQlJBTkNIPSJtYWluIgogICAgcHJpbnRmICIke1lFTExPV30gIOKPsyAgUHVsbCBkZSAnJHJlcG9fbmFtZScgKGJyYW5jaGUgOiAkQlJBTkNIKS4uLiR7UkVTRVR9XG4iCiAgICBPVVRQVVQ9JChnaXQgcHVsbCBvcmlnaW4gIiRCUkFOQ0giIDI+JjEpOyBFWElUX0NPREU9JD8KICAgIGlmIFsgJEVYSVRfQ09ERSAtZXEgMCBdOyB0aGVuCiAgICAgICAgaWYgZWNobyAiJE9VVFBVVCIgfCBncmVwIC1xICJBbHJlYWR5IHVwIHRvIGRhdGUiOyB0aGVuCiAgICAgICAgICAgIHByaW50ZiAiJHtDWUFOfSAg4oS577iPICAgJyRyZXBvX25hbWUnIGVzdCBkw6lqw6Agw6Agam91ci4ke1JFU0VUfVxuXG4iCiAgICAgICAgZWxzZQogICAgICAgICAgICBDSEFOR0VEPSQoZWNobyAiJE9VVFBVVCIgfCBncmVwIC1FICJeXHMrWzAtOV0rIGZpbGUiIHwgaGVhZCAtMSkKICAgICAgICAgICAgcHJpbnRmICIke0dSRUVOfSR7Qk9MRH0gIOKchSAgJyRyZXBvX25hbWUnIG1pcyDDoCBqb3VyIGF2ZWMgc3VjY8Oocy4ke1JFU0VUfVxuIgogICAgICAgICAgICBbIC1uICIkQ0hBTkdFRCIgXSAmJiBwcmludGYgIiR7R1JFRU59ICAgICAkQ0hBTkdFRCR7UkVTRVR9XG4iOyBwcmludGYgIlxuIgogICAgICAgIGZpCiAgICBlbHNlCiAgICAgICAgcHJpbnRmICIke1JFRH0ke0JPTER9ICDinYwgIMOJY2hlYyBkdSBwdWxsIHBvdXIgJyRyZXBvX25hbWUnLiR7UkVTRVR9XG4iCiAgICAgICAgcHJpbnRmICIke1lFTExPV30gICAgIETDqXRhaWwgOiAkKGVjaG8gIiRPVVRQVVQiIHwgdGFpbCAtMSkke1JFU0VUfVxuXG4iCiAgICBmaQp9CmlmIFsgLXogIiRDSE9JQ0UiIF07IHRoZW4KICAgIHByaW50ZiAiJHtZRUxMT1d9ICDwn5SEICBNaXNlIMOgIGpvdXIgZGUgdG91cyBsZXMgZMOpcMO0dHMuLi4ke1JFU0VUfVxuXG4iCiAgICBmb3IgUkVQTyBpbiAiJHtSRVBPU19MSVNUW0BdfSI7IGRvIHB1bGxfcmVwbyAiJFJFUE8iOyBkb25lCmVsaWYgW1sgIiRDSE9JQ0UiID1+IF5bMC05XSskIF1dICYmIFsgIiRDSE9JQ0UiIC1nZSAxIF0gJiYgWyAiJENIT0lDRSIgLWxlICIkeyNSRVBPU19MSVNUW0BdfSIgXTsgdGhlbgogICAgcHVsbF9yZXBvICIke1JFUE9TX0xJU1RbJCgoQ0hPSUNFLTEpKV19IgplbHNlIHByaW50ZiAiJHtSRUR9ICDimqDvuI8gICBDaG9peCBpbnZhbGlkZS4ke1JFU0VUfVxuXG4iOyBleGl0IDE7IGZp" | base64 -d > "$_T"
+install_or_update "gitpull" "$_T"; rm -f "$_T"
 
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
+# ── gitstatus ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBNQUdFTlRBPSdcMDMzWzA7MzVtJzsgQk9MRD0nXDAzM1sxbSc7IFJFU0VUPSdcMDMzWzBtJwpzb3VyY2UgIiRIT01FLy5naXRodWJfY29uZmlnIiB8fCB7IHByaW50ZiAiJHtSRUR9ICDinYwgIENvbmZpZyBpbnRyb3V2YWJsZS4ke1JFU0VUfVxuIjsgZXhpdCAxOyB9CkdJVEhVQl9ESVI9Ii9zdG9yYWdlL2VtdWxhdGVkLzAvZ2l0aHViIgpwcmludGYgIlxuJHtDWUFOfSR7Qk9MRH3ilZTilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZcke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICR7WUVMTE9XfSR7Qk9MRH3wn5OKICBHSVRIVUIgU1RBVFVTIOKAlCDDiXRhdCBkZSB2b3MgZMOpcMO0dHMgbG9jYXV4JHtSRVNFVH0gJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWa4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWdJHtSRVNFVH1cblxuIgpwcmludGYgIiR7Q1lBTn0gIPCfkaQgIENvbXB0ZSBhY3RpZiA6ICR7Qk9MRH0kVVNFUk5BTUUke1JFU0VUfVxuXG4iCmlmIFsgISAtZCAiJEdJVEhVQl9ESVIiIF0gfHwgWyAteiAiJChscyAtQSAiJEdJVEhVQl9ESVIiIDI+L2Rldi9udWxsKSIgXTsgdGhlbgogICAgcHJpbnRmICIke1lFTExPV30gIOKEue+4jyAgIEF1Y3VuIGTDqXDDtHQgY2xvbsOpIHRyb3V2w6kgZGFucyAnJEdJVEhVQl9ESVInLiR7UkVTRVR9XG4iCiAgICBwcmludGYgIiR7WUVMTE9XfSAg8J+SoSAgVXRpbGlzZXogJ2dpdGdldCcgbW9kZSAyIHBvdXIgY2xvbmVyIHVuIGTDqXDDtHQuJHtSRVNFVH1cblxuIjsgZXhpdCAwCmZpClRPVEFMPTA7IENMRUFOPTA7IERJUlRZPTA7IEJFSElORD0wCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIEke1JFU0VUfVxuIgpmb3IgRElSIGluICIkR0lUSFVCX0RJUiIvKi87IGRvCiAgICBbIC1kICIkRElSLy5naXQiIF0gfHwgY29udGludWUKICAgIFJFUE9fTkFNRT0kKGJhc2VuYW1lICIkRElSIikKICAgIEJSQU5DSD0kKGdpdCAtQyAiJERJUiIgcmV2LXBhcnNlIC0tYWJicmV2LXJlZiBIRUFEIDI+L2Rldi9udWxsIHx8IGVjaG8gIj8iKQogICAgVE9UQUw9JCgoVE9UQUwgKyAxKSkKICAgIGdpdCAtQyAiJERJUiIgcmVtb3RlIHNldC11cmwgb3JpZ2luICJodHRwczovLyR7VE9LRU59QGdpdGh1Yi5jb20vJHtVU0VSTkFNRX0vJHtSRVBPX05BTUV9LmdpdCIgPiAvZGV2L251bGwgMj4mMQogICAgZ2l0IC1DICIkRElSIiBmZXRjaCBvcmlnaW4gIiRCUkFOQ0giID4gL2Rldi9udWxsIDI+JjEKICAgIExPQ0FMX0NIQU5HRVM9JChnaXQgLUMgIiRESVIiIHN0YXR1cyAtLXBvcmNlbGFpbiAyPi9kZXYvbnVsbCB8IHdjIC1sKQogICAgQ09NTUlUU19CRUhJTkQ9JChnaXQgLUMgIiRESVIiIHJldi1saXN0IC0tY291bnQgSEVBRC4ub3JpZ2luLyIkQlJBTkNIIiAyPi9kZXYvbnVsbCB8fCBlY2hvIDApCiAgICBDT01NSVRTX0FIRUFEPSQoZ2l0IC1DICIkRElSIiAgcmV2LWxpc3QgLS1jb3VudCBvcmlnaW4vIiRCUkFOQ0giLi5IRUFEIDI+L2Rldi9udWxsIHx8IGVjaG8gMCkKICAgIHByaW50ZiAiICAke0JPTER9JS0yOHMke1JFU0VUfSAgJHtDWUFOffCfjL8gJS0xMHMke1JFU0VUfSIgIiRSRVBPX05BTUUiICIkQlJBTkNIIgogICAgaWYgWyAiJExPQ0FMX0NIQU5HRVMiIC1lcSAwIF0gJiYgWyAiJENPTU1JVFNfQkVISU5EIiAtZXEgMCBdICYmIFsgIiRDT01NSVRTX0FIRUFEIiAtZXEgMCBdOyB0aGVuCiAgICAgICAgcHJpbnRmICIgICR7R1JFRU594pyFIFByb3ByZSR7UkVTRVR9XG4iOyBDTEVBTj0kKChDTEVBTiArIDEpKQogICAgZWxzZQogICAgICAgIFNUQVRVU19QQVJUUz0oKQogICAgICAgIFsgIiRMT0NBTF9DSEFOR0VTIiAtZ3QgMCBdICAmJiBTVEFUVVNfUEFSVFMrPSgiJHtZRUxMT1d94pqg77iPICAkTE9DQUxfQ0hBTkdFUyBtb2RpZi4ke1JFU0VUfSIpCiAgICAgICAgWyAiJENPTU1JVFNfQUhFQUQiIC1ndCAwIF0gICYmIFNUQVRVU19QQVJUUys9KCIke01BR0VOVEF94qyG77iPICAkQ09NTUlUU19BSEVBRCDDoCBwb3Vzc2VyJHtSRVNFVH0iKQogICAgICAgIFsgIiRDT01NSVRTX0JFSElORCIgLWd0IDAgXSAmJiBTVEFUVVNfUEFSVFMrPSgiJHtSRUR94qyH77iPICAkQ09NTUlUU19CRUhJTkQgw6AgcsOpY3Vww6lyZXIke1JFU0VUfSIpCiAgICAgICAgcHJpbnRmICIgICIKICAgICAgICBmb3IgUEFSVCBpbiAiJHtTVEFUVVNfUEFSVFNbQF19IjsgZG8gcHJpbnRmICIkUEFSVCAgIjsgZG9uZQogICAgICAgIHByaW50ZiAiXG4iOyBESVJUWT0kKChESVJUWSArIDEpKQogICAgICAgIFsgIiRDT01NSVRTX0JFSElORCIgLWd0IDAgXSAmJiBCRUhJTkQ9JCgoQkVISU5EICsgMSkpCiAgICBmaQpkb25lCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIEke1JFU0VUfVxuIgpwcmludGYgIiR7R1JFRU59ICDwn5OKICBUb3RhbCA6ICRUT1RBTCAgfCAg4pyFICRDTEVBTiBwcm9wcmUocykgIHwgIOKaoO+4jyAgJERJUlRZIMOgIHRyYWl0ZXIke1JFU0VUfVxuIgpbICIkQkVISU5EIiAtZ3QgMCBdICYmIHByaW50ZiAiJHtSRUR9ICDwn5KhICAkQkVISU5EIGTDqXDDtHQocykgZW4gcmV0YXJkIOKAlCB0YXBleiAnZ2l0cHVsbCcgcG91ciBtZXR0cmUgw6Agam91ci4ke1JFU0VUfVxuIgpwcmludGYgIlxuIg==" | base64 -d > "$_T"
+install_or_update "gitstatus" "$_T"; rm -f "$_T"
 
-source "$HOME/.github_config" || { printf "${RED}  ❌  Config introuvable.${RESET}\n"; exit 1; }
-
-printf "\n${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${RED}${BOLD}🗑️   GITHUB DELETE — Suppression de dépôt${RESET}    ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}\n\n"
-printf "${CYAN}  👤  Compte actif : ${BOLD}$USERNAME${RESET}\n\n"
-printf "${YELLOW}  💡  Conseil : tapez 'gitlist' pour voir vos dépôts.${RESET}\n\n"
-
-read -p "$(printf "${CYAN}${BOLD}  🏷️   Nom du dépôt à supprimer : ${RESET}")" REPO_NAME
-[ -z "$REPO_NAME" ] && exit 1
-
-printf "\n${RED}${BOLD}  ⚠️   ATTENTION : Cette action est IRRÉVERSIBLE !${RESET}\n"
-read -p "$(printf "${YELLOW}${BOLD}  ❓  Retapez '$REPO_NAME' pour confirmer : ${RESET}")" CONFIRM_NAME
-
-if [ "$CONFIRM_NAME" != "$REPO_NAME" ]; then
-    printf "${GREEN}  🛑  Suppression annulée.${RESET}\n\n"; exit 1
-fi
-
-printf "${YELLOW}  ⏳  Suppression en cours...${RESET}\n"
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
-    -H "Authorization: token $TOKEN" \
-    "https://api.github.com/repos/$USERNAME/$REPO_NAME")
-
-if [ "$HTTP_STATUS" -eq 204 ]; then
-    printf "\n${GREEN}${BOLD}  ✅  Dépôt '$REPO_NAME' supprimé avec succès.${RESET}\n\n"
-else
-    printf "\n${RED}${BOLD}  ❌  Échec. Code HTTP : $HTTP_STATUS${RESET}\n\n"
-fi
-TOOLEOF
+# ── gitdel ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBCT0xEPSdcMDMzWzFtJzsgUkVTRVQ9J1wwMzNbMG0nCnNvdXJjZSAiJEhPTUUvLmdpdGh1Yl9jb25maWciIHx8IHsgcHJpbnRmICIke1JFRH0gIOKdjCAgQ29uZmlnIGludHJvdXZhYmxlLiR7UkVTRVR9XG4iOyBleGl0IDE7IH0KcHJpbnRmICJcbiR7Q1lBTn0ke0JPTER94pWU4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWXJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9ICAke1JFRH0ke0JPTER98J+Xke+4jyAgIEdJVEhVQiBERUxFVEUg4oCUIFN1cHByZXNzaW9uIGRlIGTDqXDDtHQke1JFU0VUfSAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZrilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZ0ke1JFU0VUfVxuXG4iCnByaW50ZiAiJHtDWUFOfSAg8J+RpCAgQ29tcHRlIGFjdGlmIDogJHtCT0xEfSRVU0VSTkFNRSR7UkVTRVR9XG5cbiIKcHJpbnRmICIke1lFTExPV30gIPCfkqEgIENvbnNlaWwgOiB0YXBleiAnZ2l0bGlzdCcgcG91ciB2b2lyIHZvcyBkw6lww7R0cy4ke1JFU0VUfVxuXG4iCnJlYWQgLXAgIiQocHJpbnRmICIke0NZQU59JHtCT0xEfSAg8J+Pt++4jyAgIE5vbSBkdSBkw6lww7R0IMOgIHN1cHByaW1lciA6ICR7UkVTRVR9IikiIFJFUE9fTkFNRQpbIC16ICIkUkVQT19OQU1FIiBdICYmIGV4aXQgMQpwcmludGYgIlxuJHtSRUR9JHtCT0xEfSAg4pqg77iPICAgQVRURU5USU9OIDogQ2V0dGUgYWN0aW9uIGVzdCBJUlLDiVZFUlNJQkxFICEke1JFU0VUfVxuIgpyZWFkIC1wICIkKHByaW50ZiAiJHtZRUxMT1d9JHtCT0xEfSAg4p2TICBSZXRhcGV6ICckUkVQT19OQU1FJyBwb3VyIGNvbmZpcm1lciA6ICR7UkVTRVR9IikiIENPTkZJUk1fTkFNRQppZiBbICIkQ09ORklSTV9OQU1FIiAhPSAiJFJFUE9fTkFNRSIgXTsgdGhlbiBwcmludGYgIiR7R1JFRU59ICDwn5uRICBTdXBwcmVzc2lvbiBhbm51bMOpZS4ke1JFU0VUfVxuXG4iOyBleGl0IDA7IGZpCnByaW50ZiAiJHtZRUxMT1d9ICDij7MgIFN1cHByZXNzaW9uIGVuIGNvdXJzLi4uJHtSRVNFVH1cbiIKSFRUUF9TVEFUVVM9JChjdXJsIC1zIC1vIC9kZXYvbnVsbCAtdyAiJXtodHRwX2NvZGV9IiAtWCBERUxFVEUgXAogICAgLUggIkF1dGhvcml6YXRpb246IHRva2VuICRUT0tFTiIgImh0dHBzOi8vYXBpLmdpdGh1Yi5jb20vcmVwb3MvJFVTRVJOQU1FLyRSRVBPX05BTUUiKQppZiBbICIkSFRUUF9TVEFUVVMiIC1lcSAyMDQgXTsgdGhlbgogICAgcHJpbnRmICJcbiR7R1JFRU59JHtCT0xEfSAg4pyFICBEw6lww7R0ICckUkVQT19OQU1FJyBzdXBwcmltw6kgYXZlYyBzdWNjw6hzLiR7UkVTRVR9XG4iCiAgICBMT0NBTF9QQVRIPSIvc3RvcmFnZS9lbXVsYXRlZC8wL2dpdGh1Yi8kUkVQT19OQU1FIgogICAgaWYgWyAtZCAiJExPQ0FMX1BBVEgiIF07IHRoZW4KICAgICAgICByZWFkIC1wICIkKHByaW50ZiAiJHtDWUFOfSAg4p2TICBTdXBwcmltZXIgYXVzc2kgbGUgY2xvbmUgbG9jYWwgPyAoby9uKSA6ICR7UkVTRVR9IikiIERFTF9MT0NBTAogICAgICAgIFtbICIkREVMX0xPQ0FMIiA9PSAibyIgfHwgIiRERUxfTE9DQUwiID09ICJPIiBdXSAmJiBybSAtcmYgIiRMT0NBTF9QQVRIIiAmJiBwcmludGYgIiR7R1JFRU59ICDwn6e5ICBDbG9uZSBsb2NhbCBzdXBwcmltw6kuJHtSRVNFVH1cbiIKICAgIGZpCiAgICBwcmludGYgIlxuIgplbHNlCiAgICBwcmludGYgIlxuJHtSRUR9JHtCT0xEfSAg4p2MICDDiWNoZWMuIENvZGUgSFRUUCA6ICRIVFRQX1NUQVRVUyR7UkVTRVR9XG5cbiIKZmk=" | base64 -d > "$_T"
 install_or_update "gitdel" "$_T"; rm -f "$_T"
 
-# ─────────────────────────────────────────────
-#  cspace
-# ─────────────────────────────────────────────
-_T=$(mktemp); cat << 'TOOLEOF' > "$_T"
-#!/bin/bash
-
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
-
-source "$HOME/.github_config" || { printf "${RED}  ❌  Config introuvable.${RESET}\n"; exit 1; }
-
-printf "\n${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}☁️   GITHUB CODESPACES — Serveur Cloud${RESET}       ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}\n\n"
-printf "${CYAN}  👤  Compte actif : ${BOLD}$USERNAME${RESET}\n\n"
-
-read -p "$(printf "${CYAN}${BOLD}  🏷️   Dépôt pour créer un espace (vide = connexion) : ${RESET}")" REPO_NAME
-
-if [ -z "$REPO_NAME" ]; then
-    printf "${YELLOW}  🔗  Connexion à votre Codespace existant...${RESET}\n"
-    gh codespace ssh
-else
-    printf "${YELLOW}  ⏳  Création d'un serveur Cloud pour '$REPO_NAME'...${RESET}\n"
-    if gh codespace create -R "$USERNAME/$REPO_NAME"; then
-        printf "\n${GREEN}${BOLD}  ✅  Serveur créé ! Tapez 'cspace' pour vous y connecter.${RESET}\n\n"
-    else
-        printf "\n${RED}${BOLD}  ❌  Échec de création du Codespace.${RESET}\n\n"
-    fi
-fi
-TOOLEOF
+# ── cspace ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBCT0xEPSdcMDMzWzFtJzsgUkVTRVQ9J1wwMzNbMG0nCnNvdXJjZSAiJEhPTUUvLmdpdGh1Yl9jb25maWciIHx8IHsgcHJpbnRmICIke1JFRH0gIOKdjCAgQ29uZmlnIGludHJvdXZhYmxlLiR7UkVTRVR9XG4iOyBleGl0IDE7IH0KcHJpbnRmICJcbiR7Q1lBTn0ke0JPTER94pWU4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWXJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9ICAke1lFTExPV30ke0JPTER94piB77iPICAgR0lUSFVCIENPREVTUEFDRVMg4oCUIFNlcnZldXIgQ2xvdWQke1JFU0VUfSAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZrilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZ0ke1JFU0VUfVxuXG4iCnByaW50ZiAiJHtDWUFOfSAg8J+RpCAgQ29tcHRlIGFjdGlmIDogJHtCT0xEfSRVU0VSTkFNRSR7UkVTRVR9XG5cbiIKcmVhZCAtcCAiJChwcmludGYgIiR7Q1lBTn0ke0JPTER9ICDwn4+377iPICAgRMOpcMO0dCBwb3VyIGNyw6llciB1biBlc3BhY2UgKHZpZGUgPSBjb25uZXhpb24pIDogJHtSRVNFVH0iKSIgUkVQT19OQU1FCmlmIFsgLXogIiRSRVBPX05BTUUiIF07IHRoZW4KICAgIHByaW50ZiAiJHtZRUxMT1d9ICDwn5SXICBDb25uZXhpb24gw6Agdm90cmUgQ29kZXNwYWNlIGV4aXN0YW50Li4uJHtSRVNFVH1cbiI7IGdoIGNvZGVzcGFjZSBzc2gKZWxzZQogICAgcHJpbnRmICIke1lFTExPV30gIOKPsyAgQ3LDqWF0aW9uIGQndW4gc2VydmV1ciBDbG91ZCBwb3VyICckUkVQT19OQU1FJy4uLiR7UkVTRVR9XG4iCiAgICBpZiBnaCBjb2Rlc3BhY2UgY3JlYXRlIC1SICIkVVNFUk5BTUUvJFJFUE9fTkFNRSI7IHRoZW4KICAgICAgICBwcmludGYgIlxuJHtHUkVFTn0ke0JPTER9ICDinIUgIFNlcnZldXIgY3LDqcOpICEgVGFwZXogJ2NzcGFjZScgcG91ciB2b3VzIHkgY29ubmVjdGVyLiR7UkVTRVR9XG5cbiIKICAgIGVsc2UgcHJpbnRmICJcbiR7UkVEfSR7Qk9MRH0gIOKdjCAgw4ljaGVjIGRlIGNyw6lhdGlvbiBkdSBDb2Rlc3BhY2UuJHtSRVNFVH1cblxuIjsgZmkKZmk=" | base64 -d > "$_T"
 install_or_update "cspace" "$_T"; rm -f "$_T"
 
-# ─────────────────────────────────────────────
-#  gitswitch
-# ─────────────────────────────────────────────
-_T=$(mktemp); cat << 'TOOLEOF' > "$_T"
-#!/bin/bash
-
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; MAGENTA='\033[0;35m'; BOLD='\033[1m'; RESET='\033[0m'
-
-CONFIG_FILE="$HOME/.github_config"
-ACCOUNTS_FILE="$HOME/.github_accounts"
-
-source "$CONFIG_FILE" 2>/dev/null
-CURRENT_USER="${USERNAME:-inconnu}"
-
-printf "\n${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}🔀  GITHUB SWITCH — Changer de compte${RESET}       ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}\n\n"
-printf "${CYAN}  👤  Compte actif : ${BOLD}$CURRENT_USER${RESET}\n\n"
-
-USERNAMES=(); EMAILS=(); TOKENS=(); LABELS=()
-while IFS='|' read -r u e t l; do
-    [ -z "$u" ] && continue
-    USERNAMES+=("$u"); EMAILS+=("$e"); TOKENS+=("$t"); LABELS+=("$l")
-done < "$ACCOUNTS_FILE" 2>/dev/null
-
-TOTAL=${#USERNAMES[@]}
-
-printf "${YELLOW}${BOLD}  📋  Comptes enregistrés :${RESET}\n\n"
-
-if [ "$TOTAL" -eq 0 ]; then
-    printf "${YELLOW}  ℹ️   Aucun compte enregistré.${RESET}\n\n"
-else
-    for i in "${!USERNAMES[@]}"; do
-        NUM=$((i+1))
-        MARKER=""
-        [ "${USERNAMES[$i]}" == "$CURRENT_USER" ] && MARKER=" ${GREEN}← actif${RESET}"
-        printf "  ${CYAN}${BOLD}$NUM)${RESET}  ${BOLD}${LABELS[$i]}${RESET}  ${CYAN}(@${USERNAMES[$i]})${RESET}$MARKER\n"
-    done
-fi
-
-printf "\n  ${MAGENTA}${BOLD}+)${RESET}  Ajouter un nouveau compte\n\n"
-read -p "$(printf "${CYAN}${BOLD}  👉  Votre choix : ${RESET}")" CHOICE
-
-# ── Add new account ──
-if [[ "$CHOICE" == "+" ]]; then
-    printf "\n${YELLOW}${BOLD}  ➕  Nouveau compte GitHub${RESET}\n\n"
-
-    while true; do
-        read -p "$(printf "${CYAN}${BOLD}  👤  Nom d'utilisateur : ${RESET}")" NEW_USER
-        [ -n "$NEW_USER" ] && break
-        printf "${YELLOW}  ⚠️   Obligatoire.${RESET}\n"
-    done
-    read -p "$(printf "${CYAN}${BOLD}  📧  Adresse e-mail    : ${RESET}")" NEW_EMAIL
-    while true; do
-        read -p "$(printf "${CYAN}${BOLD}  🔑  Token d'accès     : ${RESET}")" NEW_TOKEN
-        [ -n "$NEW_TOKEN" ] && break
-        printf "${YELLOW}  ⚠️   Obligatoire.${RESET}\n"
-    done
-    read -p "$(printf "${CYAN}${BOLD}  🏷️   Label du compte   : ${RESET}")" NEW_LABEL
-    NEW_LABEL="${NEW_LABEL:-$NEW_USER}"
-
-    printf "${YELLOW}  🔍  Vérification du token...${RESET}\n"
-    HTTP_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Authorization: token $NEW_TOKEN" \
-        "https://api.github.com/user")
-
-    if [ "$HTTP_CHECK" != "200" ]; then
-        printf "${RED}${BOLD}  ❌  Token invalide (code $HTTP_CHECK). Abandon.${RESET}\n\n"
-        exit 1
-    fi
-    printf "${GREEN}  ✅  Token valide.${RESET}\n\n"
-
-    # Update or append in accounts file
-    touch "$ACCOUNTS_FILE"
-    if grep -q "^${NEW_USER}|" "$ACCOUNTS_FILE" 2>/dev/null; then
-        # Replace existing entry for this user
-        local_tmp=$(mktemp)
-        grep -v "^${NEW_USER}|" "$ACCOUNTS_FILE" > "$local_tmp"
-        echo "${NEW_USER}|${NEW_EMAIL}|${NEW_TOKEN}|${NEW_LABEL}" >> "$local_tmp"
-        mv "$local_tmp" "$ACCOUNTS_FILE"
-        printf "${CYAN}  🔄  Compte '${NEW_USER}' mis à jour dans le registre.${RESET}\n"
-    else
-        echo "${NEW_USER}|${NEW_EMAIL}|${NEW_TOKEN}|${NEW_LABEL}" >> "$ACCOUNTS_FILE"
-        printf "${GREEN}  ✅  Compte '${NEW_USER}' ajouté au registre.${RESET}\n"
-    fi
-    chmod 600 "$ACCOUNTS_FILE"
-
-    SEL_USER="$NEW_USER"; SEL_EMAIL="$NEW_EMAIL"; SEL_TOKEN="$NEW_TOKEN"
-
-# ── Select existing account ──
-elif [[ "$CHOICE" =~ ^[0-9]+$ ]] && [ "$CHOICE" -ge 1 ] && [ "$CHOICE" -le "$TOTAL" ]; then
-    IDX=$((CHOICE-1))
-    SEL_USER="${USERNAMES[$IDX]}"
-    SEL_EMAIL="${EMAILS[$IDX]}"
-    SEL_TOKEN="${TOKENS[$IDX]}"
-
-    if [ "$SEL_USER" == "$CURRENT_USER" ]; then
-        printf "\n${YELLOW}  ℹ️   Vous utilisez déjà ce compte.${RESET}\n\n"
-        exit 0
-    fi
-else
-    printf "${RED}  ⚠️   Choix invalide.${RESET}\n\n"; exit 1
-fi
-
-# ── Apply selected account ──
-printf "${YELLOW}  ⏳  Activation du compte '$SEL_USER'...${RESET}\n"
-
-{
-    printf 'USERNAME="%s"\n' "$SEL_USER"
-    printf 'EMAIL="%s"\n'    "$SEL_EMAIL"
-    printf 'TOKEN="%s"\n'    "$SEL_TOKEN"
-} > "$CONFIG_FILE"
-chmod 600 "$CONFIG_FILE"
-
-echo "$SEL_TOKEN" | gh auth login --with-token 2>/dev/null
-git config --global user.name  "$SEL_USER"
-git config --global user.email "$SEL_EMAIL"
-
-printf "\n${GREEN}${BOLD}  ✅  Compte activé avec succès !${RESET}\n"
-printf "${GREEN}  👤  Désormais connecté en tant que : ${BOLD}$SEL_USER${RESET}\n\n"
-TOOLEOF
+# ── gitswitch ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBNQUdFTlRBPSdcMDMzWzA7MzVtJzsgQk9MRD0nXDAzM1sxbSc7IFJFU0VUPSdcMDMzWzBtJwpDT05GSUdfRklMRT0iJEhPTUUvLmdpdGh1Yl9jb25maWciOyBBQ0NPVU5UU19GSUxFPSIkSE9NRS8uZ2l0aHViX2FjY291bnRzIgpzb3VyY2UgIiRDT05GSUdfRklMRSIgMj4vZGV2L251bGw7IENVUlJFTlRfVVNFUj0iJHtVU0VSTkFNRTotaW5jb25udX0iCnByaW50ZiAiXG4ke0NZQU59JHtCT0xEfeKVlOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVlyR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtZRUxMT1d9JHtCT0xEffCflIAgIEdJVEhVQiBTV0lUQ0gg4oCUIENoYW5nZXIgZGUgY29tcHRlJHtSRVNFVH0gICAgICAgJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWa4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWdJHtSRVNFVH1cblxuIgpwcmludGYgIiR7Q1lBTn0gIPCfkaQgIENvbXB0ZSBhY3RpZiA6ICR7Qk9MRH0kQ1VSUkVOVF9VU0VSJHtSRVNFVH1cblxuIgpVU0VSTkFNRVM9KCk7IEVNQUlMUz0oKTsgVE9LRU5TPSgpOyBMQUJFTFM9KCkKd2hpbGUgSUZTPSd8JyByZWFkIC1yIHUgZSB0IGw7IGRvCiAgICBbIC16ICIkdSIgXSAmJiBjb250aW51ZQogICAgVVNFUk5BTUVTKz0oIiR1Iik7IEVNQUlMUys9KCIkZSIpOyBUT0tFTlMrPSgiJHQiKTsgTEFCRUxTKz0oIiRsIikKZG9uZSA8ICIkQUNDT1VOVFNfRklMRSIgMj4vZGV2L251bGwKVE9UQUw9JHsjVVNFUk5BTUVTW0BdfQpwcmludGYgIiR7WUVMTE9XfSR7Qk9MRH0gIPCfk4sgIENvbXB0ZXMgZW5yZWdpc3Ryw6lzIDoke1JFU0VUfVxuXG4iCmlmIFsgIiRUT1RBTCIgLWVxIDAgXTsgdGhlbiBwcmludGYgIiR7WUVMTE9XfSAg4oS577iPICAgQXVjdW4gY29tcHRlIGVucmVnaXN0csOpLiR7UkVTRVR9XG5cbiIKZWxzZQogICAgZm9yIGkgaW4gIiR7IVVTRVJOQU1FU1tAXX0iOyBkbwogICAgICAgIE5VTT0kKChpKzEpKTsgTUFSS0VSPSIiCiAgICAgICAgWyAiJHtVU0VSTkFNRVNbJGldfSIgPT0gIiRDVVJSRU5UX1VTRVIiIF0gJiYgTUFSS0VSPSIgJHtHUkVFTn3ihpAgYWN0aWYke1JFU0VUfSIKICAgICAgICBwcmludGYgIiAgJHtDWUFOfSR7Qk9MRH0kTlVNKSR7UkVTRVR9ICAke0JPTER9JHtMQUJFTFNbJGldfSR7UkVTRVR9ICAke0NZQU59KEAke1VTRVJOQU1FU1skaV19KSR7UkVTRVR9JE1BUktFUlxuIgogICAgZG9uZQpmaQpwcmludGYgIlxuICAke01BR0VOVEF9JHtCT0xEfSspJHtSRVNFVH0gIEFqb3V0ZXIgdW4gbm91dmVhdSBjb21wdGVcblxuIgpyZWFkIC1wICIkKHByaW50ZiAiJHtDWUFOfSR7Qk9MRH0gIPCfkYkgIFZvdHJlIGNob2l4IDogJHtSRVNFVH0iKSIgQ0hPSUNFCmlmIFtbICIkQ0hPSUNFIiA9PSAiKyIgXV07IHRoZW4KICAgIHByaW50ZiAiXG4ke1lFTExPV30ke0JPTER9ICDinpUgIE5vdXZlYXUgY29tcHRlIEdpdEh1YiR7UkVTRVR9XG5cbiIKICAgIHdoaWxlIHRydWU7IGRvIHJlYWQgLXAgIiQocHJpbnRmICIke0NZQU59JHtCT0xEfSAg8J+RpCAgTm9tIGQndXRpbGlzYXRldXIgOiAke1JFU0VUfSIpIiBORVdfVVNFUjsgWyAtbiAiJE5FV19VU0VSIiBdICYmIGJyZWFrOyBwcmludGYgIiR7WUVMTE9XfSAg4pqg77iPICAgT2JsaWdhdG9pcmUuJHtSRVNFVH1cbiI7IGRvbmUKICAgIHJlYWQgLXAgIiQocHJpbnRmICIke0NZQU59JHtCT0xEfSAg8J+TpyAgQWRyZXNzZSBlLW1haWwgICAgOiAke1JFU0VUfSIpIiBORVdfRU1BSUwKICAgIHdoaWxlIHRydWU7IGRvIHJlYWQgLXAgIiQocHJpbnRmICIke0NZQU59JHtCT0xEfSAg8J+UkSAgVG9rZW4gZCdhY2PDqHMgICAgIDogJHtSRVNFVH0iKSIgTkVXX1RPS0VOOyBbIC1uICIkTkVXX1RPS0VOIiBdICYmIGJyZWFrOyBwcmludGYgIiR7WUVMTE9XfSAg4pqg77iPICAgT2JsaWdhdG9pcmUuJHtSRVNFVH1cbiI7IGRvbmUKICAgIHJlYWQgLXAgIiQocHJpbnRmICIke0NZQU59JHtCT0xEfSAg8J+Pt++4jyAgIExhYmVsIGR1IGNvbXB0ZSAgIDogJHtSRVNFVH0iKSIgTkVXX0xBQkVMCiAgICBORVdfTEFCRUw9IiR7TkVXX0xBQkVMOi0kTkVXX1VTRVJ9IgogICAgcHJpbnRmICIke1lFTExPV30gIPCflI0gIFbDqXJpZmljYXRpb24gZHUgdG9rZW4uLi4ke1JFU0VUfVxuIgogICAgSFRUUF9DSEVDSz0kKGN1cmwgLXMgLW8gL2Rldi9udWxsIC13ICIle2h0dHBfY29kZX0iIC1IICJBdXRob3JpemF0aW9uOiB0b2tlbiAkTkVXX1RPS0VOIiAiaHR0cHM6Ly9hcGkuZ2l0aHViLmNvbS91c2VyIikKICAgIGlmIFsgIiRIVFRQX0NIRUNLIiAhPSAiMjAwIiBdOyB0aGVuIHByaW50ZiAiJHtSRUR9JHtCT0xEfSAg4p2MICBUb2tlbiBpbnZhbGlkZSAoY29kZSAkSFRUUF9DSEVDSykuIEFiYW5kb24uJHtSRVNFVH1cblxuIjsgZXhpdCAxOyBmaQogICAgcHJpbnRmICIke0dSRUVOfSAg4pyFICBUb2tlbiB2YWxpZGUuJHtSRVNFVH1cblxuIgogICAgdG91Y2ggIiRBQ0NPVU5UU19GSUxFIgogICAgQUNDT1VOVFNfVE1QPSQobWt0ZW1wKQogICAgZ3JlcCAtdiAiXiR7TkVXX1VTRVJ9fCIgIiRBQ0NPVU5UU19GSUxFIiA+ICIkQUNDT1VOVFNfVE1QIiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBlY2hvICIke05FV19VU0VSfXwke05FV19FTUFJTH18JHtORVdfVE9LRU59fCR7TkVXX0xBQkVMfSIgPj4gIiRBQ0NPVU5UU19UTVAiCiAgICBtdiAiJEFDQ09VTlRTX1RNUCIgIiRBQ0NPVU5UU19GSUxFIjsgY2htb2QgNjAwICIkQUNDT1VOVFNfRklMRSIKICAgIHByaW50ZiAiJHtHUkVFTn0gIOKchSAgQ29tcHRlICcke05FV19VU0VSfScgZW5yZWdpc3Ryw6kuJHtSRVNFVH1cbiIKICAgIFNFTF9VU0VSPSIkTkVXX1VTRVIiOyBTRUxfRU1BSUw9IiRORVdfRU1BSUwiOyBTRUxfVE9LRU49IiRORVdfVE9LRU4iCmVsaWYgW1sgIiRDSE9JQ0UiID1+IF5bMC05XSskIF1dICYmIFsgIiRDSE9JQ0UiIC1nZSAxIF0gJiYgWyAiJENIT0lDRSIgLWxlICIkVE9UQUwiIF07IHRoZW4KICAgIElEWD0kKChDSE9JQ0UtMSkpOyBTRUxfVVNFUj0iJHtVU0VSTkFNRVNbJElEWF19IjsgU0VMX0VNQUlMPSIke0VNQUlMU1skSURYXX0iOyBTRUxfVE9LRU49IiR7VE9LRU5TWyRJRFhdfSIKICAgIGlmIFsgIiRTRUxfVVNFUiIgPT0gIiRDVVJSRU5UX1VTRVIiIF07IHRoZW4gcHJpbnRmICJcbiR7WUVMTE9XfSAg4oS577iPICAgVm91cyB1dGlsaXNleiBkw6lqw6AgY2UgY29tcHRlLiR7UkVTRVR9XG5cbiI7IGV4aXQgMDsgZmkKZWxzZSBwcmludGYgIiR7UkVEfSAg4pqg77iPICAgQ2hvaXggaW52YWxpZGUuJHtSRVNFVH1cblxuIjsgZXhpdCAxOyBmaQpwcmludGYgIiR7WUVMTE9XfSAg4o+zICBBY3RpdmF0aW9uIGR1IGNvbXB0ZSAnJFNFTF9VU0VSJy4uLiR7UkVTRVR9XG4iCnsgcHJpbnRmICdVU0VSTkFNRT0iJXMiXG4nICIkU0VMX1VTRVIiOyBwcmludGYgJ0VNQUlMPSIlcyJcbicgIiRTRUxfRU1BSUwiOyBwcmludGYgJ1RPS0VOPSIlcyJcbicgIiRTRUxfVE9LRU4iOyB9ID4gIiRDT05GSUdfRklMRSIKY2htb2QgNjAwICIkQ09ORklHX0ZJTEUiCmVjaG8gIiRTRUxfVE9LRU4iIHwgZ2ggYXV0aCBsb2dpbiAtLXdpdGgtdG9rZW4gMj4vZGV2L251bGwKZ2l0IGNvbmZpZyAtLWdsb2JhbCB1c2VyLm5hbWUgIiRTRUxfVVNFUiI7IGdpdCBjb25maWcgLS1nbG9iYWwgdXNlci5lbWFpbCAiJFNFTF9FTUFJTCIKcHJpbnRmICJcbiR7R1JFRU59JHtCT0xEfSAg4pyFICBDb21wdGUgYWN0aXbDqSBhdmVjIHN1Y2PDqHMgISR7UkVTRVR9XG4iCnByaW50ZiAiJHtHUkVFTn0gIPCfkaQgIETDqXNvcm1haXMgY29ubmVjdMOpIGVuIHRhbnQgcXVlIDogJHtCT0xEfSRTRUxfVVNFUiR7UkVTRVR9XG5cbiI=" | base64 -d > "$_T"
 install_or_update "gitswitch" "$_T"; rm -f "$_T"
 
-# ─────────────────────────────────────────────
-#  gituninstall
-# ─────────────────────────────────────────────
-_T=$(mktemp); cat << 'TOOLEOF' > "$_T"
-#!/bin/bash
-
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
-
-TOOLS=(gitup gitget gitlist gitpush gitdel cspace gitswitch githelp gituninstall)
-
-printf "\n${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${RED}${BOLD}🗑️   GITHUB TOOLS — Désinstallation complète${RESET} ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}\n\n"
-
-printf "${YELLOW}  Les éléments suivants seront supprimés :${RESET}\n\n"
-for t in "${TOOLS[@]}"; do
-    printf "    ${RED}✗  $t${RESET}\n"
-done
-printf "    ${RED}✗  ~/.github_config${RESET}\n"
-printf "    ${RED}✗  ~/.github_accounts${RESET}\n\n"
-
-printf "${RED}${BOLD}  ⚠️   Cette action est IRRÉVERSIBLE.${RESET}\n"
-read -p "$(printf "${YELLOW}${BOLD}  ❓  Tapez 'OUI' pour confirmer : ${RESET}")" CONFIRM
-
-if [ "$CONFIRM" != "OUI" ]; then
-    printf "\n${GREEN}  🛑  Désinstallation annulée.${RESET}\n\n"; exit 0
-fi
-
-printf "\n${YELLOW}  ⏳  Suppression en cours...${RESET}\n\n"
-
-for t in "${TOOLS[@]}"; do
-    if [ -f "$PREFIX/bin/$t" ]; then
-        rm -f "$PREFIX/bin/$t"
-        printf "  ${GREEN}✓${RESET}  $t supprimé\n"
-    fi
-done
-
-rm -f "$HOME/.github_config"   && printf "  ${GREEN}✓${RESET}  ~/.github_config supprimé\n"
-rm -f "$HOME/.github_accounts" && printf "  ${GREEN}✓${RESET}  ~/.github_accounts supprimé\n"
-
-printf "\n${GREEN}${BOLD}  ✅  Désinstallation terminée. À bientôt !${RESET}\n\n"
-TOOLEOF
+# ── gituninstall ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBCT0xEPSdcMDMzWzFtJzsgUkVTRVQ9J1wwMzNbMG0nClRPT0xTPShnaXR1cCBnaXRnZXQgZ2l0bGlzdCBnaXRwdXNoIGdpdHB1bGwgZ2l0ZGVsIGdpdHN0YXR1cyBjc3BhY2UgZ2l0c3dpdGNoIGdpdGhlbHAgZ2l0dW5pbnN0YWxsKQpwcmludGYgIlxuJHtDWUFOfSR7Qk9MRH3ilZTilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZcke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICR7UkVEfSR7Qk9MRH3wn5eR77iPICAgR0lUSFVCIFRPT0xTIOKAlCBEw6lzaW5zdGFsbGF0aW9uIGNvbXBsw6h0ZSR7UkVTRVR9ICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVmuKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVnSR7UkVTRVR9XG5cbiIKcHJpbnRmICIke1lFTExPV30gIExlcyDDqWzDqW1lbnRzIHN1aXZhbnRzIHNlcm9udCBzdXBwcmltw6lzIDoke1JFU0VUfVxuXG4iCmZvciB0IGluICIke1RPT0xTW0BdfSI7IGRvIHByaW50ZiAiICAgICR7UkVEfeKclyAgJHQke1JFU0VUfVxuIjsgZG9uZQpwcmludGYgIiAgICAke1JFRH3inJcgIH4vLmdpdGh1Yl9jb25maWcke1JFU0VUfVxuICAgICR7UkVEfeKclyAgfi8uZ2l0aHViX2FjY291bnRzJHtSRVNFVH1cblxuIgpwcmludGYgIiR7UkVEfSR7Qk9MRH0gIOKaoO+4jyAgIENldHRlIGFjdGlvbiBlc3QgSVJSw4lWRVJTSUJMRS4ke1JFU0VUfVxuIgpyZWFkIC1wICIkKHByaW50ZiAiJHtZRUxMT1d9JHtCT0xEfSAg4p2TICBUYXBleiAnT1VJJyBwb3VyIGNvbmZpcm1lciA6ICR7UkVTRVR9IikiIENPTkZJUk0KaWYgWyAiJENPTkZJUk0iICE9ICJPVUkiIF07IHRoZW4gcHJpbnRmICJcbiR7R1JFRU59ICDwn5uRICBEw6lzaW5zdGFsbGF0aW9uIGFubnVsw6llLiR7UkVTRVR9XG5cbiI7IGV4aXQgMDsgZmkKcHJpbnRmICJcbiR7WUVMTE9XfSAg4o+zICBTdXBwcmVzc2lvbiBlbiBjb3Vycy4uLiR7UkVTRVR9XG5cbiIKZm9yIHQgaW4gIiR7VE9PTFNbQF19IjsgZG8KICAgIFsgLWYgIiRQUkVGSVgvYmluLyR0IiBdICYmIHJtIC1mICIkUFJFRklYL2Jpbi8kdCIgJiYgcHJpbnRmICIgICR7R1JFRU594pyTJHtSRVNFVH0gICR0IHN1cHByaW3DqVxuIgpkb25lCnJtIC1mICIkSE9NRS8uZ2l0aHViX2NvbmZpZyIgICAmJiBwcmludGYgIiAgJHtHUkVFTn3inJMke1JFU0VUfSAgfi8uZ2l0aHViX2NvbmZpZyBzdXBwcmltw6lcbiIKcm0gLWYgIiRIT01FLy5naXRodWJfYWNjb3VudHMiICYmIHByaW50ZiAiICAke0dSRUVOfeKckyR7UkVTRVR9ICB+Ly5naXRodWJfYWNjb3VudHMgc3VwcHJpbcOpXG4iCnByaW50ZiAiXG4ke0dSRUVOfSR7Qk9MRH0gIOKchSAgRMOpc2luc3RhbGxhdGlvbiB0ZXJtaW7DqWUuIMOAIGJpZW50w7R0ICEke1JFU0VUfVxuXG4i" | base64 -d > "$_T"
 install_or_update "gituninstall" "$_T"; rm -f "$_T"
 
-# ─────────────────────────────────────────────
-#  githelp
-# ─────────────────────────────────────────────
-_T=$(mktemp); cat << 'TOOLEOF' > "$_T"
-#!/bin/bash
-
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; MAGENTA='\033[0;35m'; BOLD='\033[1m'; RESET='\033[0m'
-
-source "$HOME/.github_config" 2>/dev/null
-CURRENT_USER="${USERNAME:-non connecté}"
-
-printf "\n"
-printf "${CYAN}${BOLD}╔══════════════════════════════════════════════════════════╗${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}🛠️   BOÎTE À OUTILS GITHUB — Termux Edition${RESET}             ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${CYAN}  👤  Compte actif : ${BOLD}$CURRENT_USER${RESET}                              ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╠══════════════════════════════════════════════════════════╣${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${GREEN}${BOLD}📤  gitup${RESET}        Uploader un dossier/fichier vers GitHub. ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}📥  gitget${RESET}       Télécharger un dépôt (ZIP ou Clone).    ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${CYAN}${BOLD}📋  gitlist${RESET}      Afficher tous vos dépôts GitHub.          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${GREEN}${BOLD}🚀  gitpush${RESET}      Pousser les modifications d'un clone.    ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${RED}${BOLD}🗑️   gitdel${RESET}       Supprimer un dépôt DÉFINITIVEMENT.       ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${MAGENTA}${BOLD}☁️   cspace${RESET}       Créer ou rejoindre un GitHub Codespace. ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}🔀  gitswitch${RESET}    Changer / Ajouter un compte GitHub.     ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${RED}${BOLD}💣  gituninstall${RESET} Supprimer tous les outils.               ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${GREEN}${BOLD}ℹ️   githelp${RESET}      Afficher ce menu d'aide.                ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╠══════════════════════════════════════════════════════════╣${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}📌  COMMANDES GITHUB UTILES${RESET}                             ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╠══════════════════════════════════════════════════════════╣${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${RED}${BOLD}🗑️   gh codespace delete${RESET}  Supprimer un serveur Cloud.    ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}🚪  exit${RESET}                 Quitter un serveur Codespace.  ${CYAN}${BOLD}║${RESET}\n"
-printf "${CYAN}${BOLD}╚══════════════════════════════════════════════════════════╝${RESET}\n"
-printf "\n"
-TOOLEOF
+# ── githelp ──
+_T=$(mktemp)
+echo "IyEvYmluL2Jhc2gKR1JFRU49J1wwMzNbMDszMm0nOyBDWUFOPSdcMDMzWzA7MzZtJzsgWUVMTE9XPSdcMDMzWzE7MzNtJwpSRUQ9J1wwMzNbMDszMW0nOyBNQUdFTlRBPSdcMDMzWzA7MzVtJzsgQk9MRD0nXDAzM1sxbSc7IFJFU0VUPSdcMDMzWzBtJwpzb3VyY2UgIiRIT01FLy5naXRodWJfY29uZmlnIiAyPi9kZXYvbnVsbDsgQ1VSUkVOVF9VU0VSPSIke1VTRVJOQU1FOi1ub24gY29ubmVjdMOpfSIKcHJpbnRmICJcbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVlOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVlyR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtZRUxMT1d9JHtCT0xEffCfm6DvuI8gICBCT8OOVEUgw4AgT1VUSUxTIEdJVEhVQiDigJQgVGVybXV4IEVkaXRpb24ke1JFU0VUfSAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtDWUFOfSAg8J+RpCAgQ29tcHRlIGFjdGlmIDogJHtCT0xEfSRDVVJSRU5UX1VTRVIke1JFU0VUfSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVoOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVoyR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtHUkVFTn0ke0JPTER98J+TpCAgZ2l0dXAke1JFU0VUfSAgICAgICAgVXBsb2FkZXIgdW4gZG9zc2llci9maWNoaWVyIHZlcnMgR2l0SHViLiAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtZRUxMT1d9JHtCT0xEffCfk6UgIGdpdGdldCR7UkVTRVR9ICAgICAgIFTDqWzDqWNoYXJnZXIgdW4gZMOpcMO0dCAoWklQIG91IENsb25lKS4gICAgJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICAgICAgICAgICAgJHtDWUFOfUZvcm1hdHMgOiAncmVwbycgb3UgJ3VzZXIvcmVwbycke1JFU0VUfSAgICAgICAgICAgICAgJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICR7Q1lBTn0ke0JPTER98J+TiyAgZ2l0bGlzdCR7UkVTRVR9ICAgICAgQWZmaWNoZXIgdG91cyB2b3MgZMOpcMO0dHMgR2l0SHViLiAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtHUkVFTn0ke0JPTER98J+agCAgZ2l0cHVzaCR7UkVTRVR9ICAgICAgUG91c3NlciBsZXMgbW9kaWZpY2F0aW9ucyAodG91dGUgYnJhbmNoZSkuJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICR7Q1lBTn0ke0JPTER94qyH77iPICAgZ2l0cHVsbCR7UkVTRVR9ICAgICAgUsOpY3Vww6lyZXIgbGVzIG1pc2VzIMOgIGpvdXIgZHUgcmVtb3RlLiAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtNQUdFTlRBfSR7Qk9MRH3wn5OKICBnaXRzdGF0dXMke1JFU0VUfSAgICDDiXRhdCBkZSB0b3VzIHZvcyBkw6lww7R0cyBsb2NhdXguICAgICAgICAgJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICR7UkVEfSR7Qk9MRH3wn5eR77iPICAgZ2l0ZGVsJHtSRVNFVH0gICAgICAgU3VwcHJpbWVyIHVuIGTDqXDDtHQgRMOJRklOSVRJVkVNRU5ULiAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtNQUdFTlRBfSR7Qk9MRH3imIHvuI8gICBjc3BhY2Uke1JFU0VUfSAgICAgICBDcsOpZXIgb3UgcmVqb2luZHJlIHVuIEdpdEh1YiBDb2Rlc3BhY2UuICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9ICAke1lFTExPV30ke0JPTER98J+UgCAgZ2l0c3dpdGNoJHtSRVNFVH0gICAgQ2hhbmdlciAvIEFqb3V0ZXIgdW4gY29tcHRlIEdpdEh1Yi4gICAgICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9ICAke1JFRH0ke0JPTER98J+SoyAgZ2l0dW5pbnN0YWxsJHtSRVNFVH0gU3VwcHJpbWVyIHRvdXMgbGVzIG91dGlscy4gICAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtHUkVFTn0ke0JPTER94oS577iPICAgZ2l0aGVscCR7UkVTRVR9ICAgICAgQWZmaWNoZXIgY2UgbWVudSBkJ2FpZGUuICAgICAgICAgICAgICAgICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVoOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVoyR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtZRUxMT1d9JHtCT0xEffCfk4wgIFdPUktGTE9XIFRZUElRVUUke1JFU0VUfSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH1cbiIKcHJpbnRmICIke0NZQU59JHtCT0xEfeKVoOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVoyR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfSAgJHtHUkVFTn1naXRzdGF0dXMke1JFU0VUfSDihpIgJHtDWUFOfWdpdHB1bGwke1JFU0VUfSDihpIgbW9kaWZpZXIg4oaSICR7R1JFRU59Z2l0cHVzaCR7UkVTRVR9ICAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilaDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilaMke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICR7WUVMTE9XfSR7Qk9MRH3wn5OMICBDT01NQU5ERVMgR0lUSFVCIFVUSUxFUyR7UkVTRVR9ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilaDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilaMke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICR7UkVEfSR7Qk9MRH3wn5eR77iPICAgZ2ggY29kZXNwYWNlIGRlbGV0ZSR7UkVTRVR9ICBTdXBwcmltZXIgdW4gc2VydmV1ciBDbG91ZC4gICAgJHtDWUFOfSR7Qk9MRH3ilZEke1JFU0VUfVxuIgpwcmludGYgIiR7Q1lBTn0ke0JPTER94pWRJHtSRVNFVH0gICR7WUVMTE9XfSR7Qk9MRH3wn5qqICBleGl0JHtSRVNFVH0gICAgICAgICAgICAgICAgIFF1aXR0ZXIgdW4gc2VydmV1ciBDb2Rlc3BhY2UuICAke0NZQU59JHtCT0xEfeKVkSR7UkVTRVR9XG4iCnByaW50ZiAiJHtDWUFOfSR7Qk9MRH3ilZrilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZ0ke1JFU0VUfVxuXG4i" | base64 -d > "$_T"
 install_or_update "githelp" "$_T"; rm -f "$_T"
 
-# ═══════════════════════════════════════════════════════════
-#  STEP 4 — STORAGE (only if not already configured)
-# ═══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════
+#  STEP 4 — STORAGE
+# ══════════════════════════════════════════════
 if [ ! -d "/storage/emulated/0" ]; then
     printf "\n"
     print_step "Configuration de l'accès au stockage Termux..."
@@ -763,11 +197,10 @@ if [ ! -d "/storage/emulated/0" ]; then
     print_success "Stockage configuré."
 fi
 
-# ═══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════
 #  SUMMARY
-# ═══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════
 printf "\n${CYAN}${BOLD}╔══════════════════════════════════════════════════════════╗${RESET}\n"
-
 if [ "$TOOLS_INSTALLED" -eq 0 ] && [ "$TOOLS_UPDATED" -eq 0 ]; then
     printf "${CYAN}${BOLD}║${RESET}  ${GREEN}${BOLD}✅  Tout est déjà à jour — aucune modification.${RESET}          ${CYAN}${BOLD}║${RESET}\n"
 else
@@ -778,7 +211,6 @@ else
     [ "$TOOLS_SKIPPED" -gt 0 ] && \
         printf "${CYAN}${BOLD}║${RESET}  ${YELLOW}${BOLD}⏭️   $TOOLS_SKIPPED outil(s) inchangé(s) — ignoré(s).${RESET}              ${CYAN}${BOLD}║${RESET}\n"
 fi
-
 printf "${CYAN}${BOLD}║${RESET}                                                          ${CYAN}${BOLD}║${RESET}\n"
 printf "${CYAN}${BOLD}║${RESET}  ${WHITE}${BOLD}👉  Tapez  ${YELLOW}githelp${RESET}${WHITE}${BOLD}  pour voir toutes vos commandes.${RESET}  ${CYAN}${BOLD}║${RESET}\n"
 printf "${CYAN}${BOLD}╚══════════════════════════════════════════════════════════╝${RESET}\n\n"
